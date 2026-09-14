@@ -1,0 +1,7 @@
+{
+  "name": "SafeAlert-frontend",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}

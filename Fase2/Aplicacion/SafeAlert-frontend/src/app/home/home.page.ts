@@ -1,12 +1,17 @@
 import { Component } from '@angular/core';
-import { IonHeader, IonToolbar, IonTitle, IonContent } from '@ionic/angular';
 
 @Component({
   selector: 'app-home',
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
-  imports: [IonHeader, IonToolbar, IonTitle, IonContent],
+  standalone: false,
 })
 export class HomePage {
+
   constructor() {}
+
+  activarAlerta() {
+    console.log('¡Alerta de pánico activada!');
+    // Más adelante aquí pondremos la lógica del GPS y WhatsApp
+  }
 }

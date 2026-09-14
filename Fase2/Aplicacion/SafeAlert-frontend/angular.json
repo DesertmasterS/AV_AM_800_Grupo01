@@ -5,12 +5,7 @@
   "projects": {
     "app": {
       "projectType": "application",
-      "schematics": {
-        "@ionic/angular-toolkit:page": {
-          "styleext": "scss",
-          "standalone": true
-        }
-      },
+      "schematics": {},
       "root": "",
       "sourceRoot": "src",
       "prefix": "app",
@@ -23,6 +18,7 @@
               "browser": ""
             },
             "index": "src/index.html",
+            "browser": "src/main.ts",
             "polyfills": [],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
@@ -31,11 +27,15 @@
                 "glob": "**/*",
                 "input": "src/assets",
                 "output": "assets"
+              },
+              {
+                "glob": "**/*.svg",
+                "input": "node_modules/ionicons/dist/ionicons/svg",
+                "output": "./svg"
               }
             ],
             "styles": ["src/global.scss", "src/theme/variables.scss"],
-            "scripts": [],
-            "browser": "src/main.ts"
+            "scripts": []
           },
           "configurations": {
             "production": {
@@ -108,7 +108,10 @@
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
-            "lintFilePatterns": ["src/**/*.ts", "src/**/*.html"]
+            "lintFilePatterns": [
+              "src/**/*.ts",
+              "src/**/*.html"
+            ]
           }
         }
       }
@@ -117,23 +120,16 @@
   "cli": {
     "schematicCollections": [
       "@ionic/angular-toolkit"
-    ],
-    "analytics": false
+    ]
   },
   "schematics": {
     "@ionic/angular-toolkit:component": {
       "styleext": "scss",
-      "standalone": true
+      "standalone": false
     },
     "@ionic/angular-toolkit:page": {
       "styleext": "scss",
-      "standalone": true
-    },
-    "@angular-eslint/schematics:application": {
-      "setParserOptionsProject": true
-    },
-    "@angular-eslint/schematics:library": {
-      "setParserOptionsProject": true
+      "standalone": false
     }
   }
 }
