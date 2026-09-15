@@ -20,7 +20,10 @@ import { AppService } from './app.service';
         password: config.get<string>('DB_PASSWORD'),
         database: config.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: true, // Sincroniza automáticamente las tablas en desarrollo
+        synchronize: true, // Sincroniza tablas automáticamente en desarrollo
+        ssl: {
+          rejectUnauthorized: false, // Requerido para Neon en la nube
+        },
       }),
     }),
   ],
