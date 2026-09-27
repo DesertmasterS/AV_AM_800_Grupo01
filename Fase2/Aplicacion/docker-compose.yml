@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  # Servicio 1: Backend NestJS
+  backend:
+    build:
+      context: ./SafeAlert-backend
+      dockerfile: Dockerfile
+    container_name: safealert_backend
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./SafeAlert-backend/.env
+
+  # Servicio 2: Frontend Ionic / Angular (Nginx)
+  frontend:
+    build:
+      context: ./SafeAlert-frontend
+      dockerfile: Dockerfile
+    container_name: safealert_frontend
+    restart: always
+    ports:
+      - "8100:80"
+    depends_on:
+      - backend

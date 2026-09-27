@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { IonicModule } from '@ionic/angular/lazy';
-
+import { beforeEach, describe, expect, it } from 'vitest';
 import { HomePage } from './home.page';
 
 describe('HomePage', () => {

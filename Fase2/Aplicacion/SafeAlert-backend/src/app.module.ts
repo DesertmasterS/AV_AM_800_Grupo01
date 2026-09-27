@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { Alerta } from './database/entities/alerta.entity';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { AppService } from './app.service';
         },
       }),
     }),
+    TypeOrmModule.forFeature([Alerta]),
   ],
   controllers: [AppController],
   providers: [AppService],
