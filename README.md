@@ -1,3 +1,12 @@
-# ProyectoCapstone
-Integrantes: Ronald Bruno, Tomás Pérez, Bastián Trostel, Cristofer Zapata
-Nombre proyecto: SegurAPP
+
+# Proyecto: SafeAlert
+ Descripción: La aplicación tiene como finalidad realizar un sistema de seguridad para las personas, utilizando métodos para detectar movimientos bruscos o una manera rápida de usar la aplicación mediante Widgets, permitiendo notificar a los contactos registrados mediante mensajería un mensaje de alerta automático y compartiendo la ubicación de la persona, además de enviar una notificación a la comisaría más cercana para solicitar ayuda ante una situación de riesgo reconocida por la persona; para evitar que se envié una alerta por equivocación, la aplicación otorga 15 segundos para cancelar la alerta. La aplicación va dirigida para todas las personas que busquen un método para reaccionar ante situaciones de riesgo, ya sea en espacio público o privado y por último la aplicación resuelve que actualmente, no existen aplicaciones gratuitas que ofrezca métodos de seguridad para las personas, algo que actualmente se requiere en Chile por la inseguridad en las calles.
+## Tecnologías Utilizadas
+La aplicación utiliza lenguaje de  TypeScript, HTML y CSS. Los frameworks usados son NestJS e Ionic. NestJS es utilizado para el desarrollo completo del Backend y las integraciones con el Frontend, Ionic para el diseño de la aplicación y responsividad de la aplicación en celulares. La base de datos utilizada es PostgreSQL junto a la extensión de PostGIS para almacenamiento de la ubicación de los usuarios. En el ámbito cloud está la base de datos, siendo almacenada en Neon, ya que está planeada para ser utilizada con PostgreSQL y PostGIS, teniendo una versión gratuita para almacenar la información.
+## Instrucciones para ejecución local
+Para la ejecución local de la aplicación se requiere de la instalación de Node v24.21.0, luego ejecutar npm install -g @nestjs/cli para la instalación de NestJS y finalmente, abrir una terminal en SafeAlert-backend y ejecutar npm install, finalmente para iniciar el backend ejecutar npm run start:dev. Para ejecutar el frontend se debe instalar Ionic mediante la ejecución de npm i -g @ionic/cli en la terminal, luego en la carpeta SafeAlert-frontend ejecutar npm install y finalmente se inicia el servidor con ionic serve. En caso de utilizar Docker, se encuentra un README en la carpeta raiz de la aplicación con los detalles de su uso.
+## Integrantes
+Ronald Bruno (Scrum Master - Desarrollador Frontend) - Tomás Pérez (Scrum Developer) - Bastián Trostel (Scrum Developer - Desarrollador Backend) - Cristofer Zapata (Scrum Developer) 
+## Metodología de trabajo
+El desarrollo de este proyecto es realizado mediante el uso de la metodología Scrum, la información de cada sprint será almacenado en Google Drive y las actividades para realizar se mantendrá un registro con el uso de Trello.
+## Arquitectura de la Solución
