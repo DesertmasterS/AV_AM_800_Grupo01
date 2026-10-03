@@ -1,0 +1,34 @@
+:host { --sidebar-width: 244px; }
+.sidebar { position: absolute; inset: 0 auto 0 0; width: var(--sidebar-width); background: #102f3d; color: #d4e1e5; display: flex; flex-direction: column; padding: 38px 22px 22px; }
+.brand { display: flex; align-items: center; gap: 10px; color: white; font-size: 25px; font-weight: 750; text-decoration: none; letter-spacing: -.8px; }
+.brand-icon { background: #244b56; border: 1px solid #45636c; padding: 9px; display: flex; border-radius: 13px; font-size: 25px; color: #8bd7ca; }
+.brand-accent { color: #8bd7ca; }
+.brand small { display: block; font-size: 8px; letter-spacing: 2px; color: #a6bec7; margin-top: 5px; }
+.nav-caption { font-size: 9px; font-weight: 650; letter-spacing: 1.8px; color: #9eb7c1; margin: 54px 12px 16px; }
+nav { display: grid; gap: 7px; }
+nav a { display: flex; gap: 13px; align-items: center; padding: 14px; border-radius: 10px; color: #bfd0d7; font-size: 14px; text-decoration: none; transition: background .2s; }
+nav ion-icon { font-size: 21px; }
+nav a:hover { background: #1c414e; }
+nav a.active { color: #fff; background: #286258; box-shadow: inset 3px 0 #8bd7ca; }
+.sidebar-note { margin-top: auto; padding: 23px 15px; border: 1px solid #35515d; border-radius: 14px; background: #193c48; }
+.sidebar-note ion-icon { color: #8bd7ca; font-size: 26px; display: block; margin-bottom: 14px; }
+.sidebar-note strong { font-size: 13px; color: #e6efef; }
+.sidebar-note p { font-size: 12px; line-height: 1.7; margin: 8px 0 0; color: #a8c0c7; }
+.profile-link { margin-top: 25px; display: flex; gap: 10px; align-items: center; color: #edf3f5; text-decoration: none; font-size: 13px; }
+.profile-link small { display: block; color: #a8c0c7; font-size: 10px; margin-top: 4px; }
+.profile-link > ion-icon { margin-left: auto; }
+.avatar, .topbar-profile { width: 37px; height: 37px; border-radius: 50%; background: #254b59; display: grid; place-items: center; font-size: 19px; }
+.workspace { position: absolute; inset: 0 0 0 var(--sidebar-width); display: flex; flex-direction: column; }
+.app-topbar { min-height: 78px; padding: 0 42px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8e8; background: #fff; }
+.topbar-caption { font-size: 10px; color: #6b8087; letter-spacing: 2px; font-weight: 600; }
+.topbar-profile { background: #eef4f3; color: #294c55; text-decoration: none; }
+.route-container { position: relative; flex: 1; }
+.mobile-brand, .mobile-nav { display: none; }
+@media (max-width: 1050px) { :host { --sidebar-width: 215px; } .sidebar { padding-inline: 16px; } .app-topbar { padding-inline: 28px; } }
+@media (max-width: 760px) {
+  .sidebar { display: none; } .workspace { left: 0; bottom: calc(72px + env(safe-area-inset-bottom)); }
+  .app-topbar { min-height: calc(64px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 20px 0; } .topbar-caption { display: none; }
+  .mobile-brand { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 750; color: #173c48; text-decoration: none; } .mobile-brand ion-icon { color: #267869; font-size: 25px; }
+  .mobile-nav { position: absolute; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; padding: 7px 4px calc(7px + env(safe-area-inset-bottom)); border-top: 1px solid #dce6e5; background: #fff; }
+  .mobile-nav a { flex: 1; flex-direction: column; gap: 6px; padding: 9px 2px; font-size: 10px; color: #637b83; border-radius: 9px; } .mobile-nav a.active { background: #edf5f1; color: #236757; box-shadow: none; }
+}

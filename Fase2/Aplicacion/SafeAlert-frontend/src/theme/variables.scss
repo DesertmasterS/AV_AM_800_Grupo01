@@ -1,2 +1,18 @@
-// For information on how to create your own theme, please refer to:
-// https://ionicframework.com/docs/theming/
+:root {
+  color-scheme: light;
+  --ion-font-family: 'Segoe UI', system-ui, sans-serif;
+  --ion-background-color: #f5f7f6;
+  --ion-text-color: #173844;
+  --ion-color-primary: #246d60;
+  --ion-color-primary-rgb: 36, 109, 96;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-shade: #205f54;
+  --ion-color-primary-tint: #3a7c70;
+  --ion-color-danger: #cd404b;
+  --ion-color-danger-rgb: 205, 64, 75;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-shade: #b43842;
+  --ion-color-danger-tint: #d2535d;
+  --ion-color-success: #246d60;
+  --ion-color-success-contrast: #ffffff;
+}

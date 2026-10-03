@@ -1,0 +1,18 @@
+<ion-content>
+  <main class="page-wrap">
+    <header class="page-heading"><p class="eyebrow">{{ page.eyebrow }}</p><h1>{{ page.title }}</h1><p>{{ page.description }}</p></header>
+    <section class="panel section-preview" [attr.aria-label]="page.title + ': vista preliminar'">
+      <div class="preview-top"><span class="preview-label">VISTA PRELIMINAR</span><span class="design-status">En diseño</span></div>
+      <div class="preview-empty"><span class="preview-icon"><ion-icon [name]="page.icon" aria-hidden="true"></ion-icon></span><h2>{{ page.title }}</h2><p>Este será tu espacio para {{ page.description.charAt(0).toLowerCase() + page.description.slice(1) }}</p><span class="preview-caption">La estructura está lista. Las funciones se incorporarán en la siguiente etapa.</span></div>
+      <div class="skeleton" aria-hidden="true"><span></span><div><i></i><i></i></div><b></b></div>
+      <div class="skeleton" aria-hidden="true"><span></span><div><i></i><i></i></div><b></b></div>
+    </section>
+    <div class="area-grid">
+      @for (area of page.areas; track area.title) {
+        <section class="panel area-card"><ion-icon [name]="area.icon" aria-hidden="true"></ion-icon><h2>{{ area.title }}</h2><span>Sección propuesta</span></section>
+      }
+    </div>
+    <a class="text-link back-link" routerLink="/home">Volver al inicio <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon></a>
+    <footer class="page-footer"><span><ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon> Tu privacidad es parte de tu seguridad.</span><span>SafeAlert · Seguridad personal</span></footer>
+  </main>
+</ion-content>

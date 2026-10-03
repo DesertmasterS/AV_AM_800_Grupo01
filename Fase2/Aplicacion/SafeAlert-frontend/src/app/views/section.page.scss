@@ -1,0 +1,18 @@
+.section-preview { padding: 25px 30px 30px; }
+.preview-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.preview-label { color: #6a8589; font-size: 9px; font-weight: 650; letter-spacing: 1.7px; }
+.design-status { font-size: 10px; padding: 7px 12px; border-radius: 16px; background: #f3f0e7; color: #75663e; }
+.preview-empty { padding: 42px 0 35px; text-align: center; max-width: 470px; margin: 0 auto; }
+.preview-icon { display: grid; place-items: center; margin: 0 auto 20px; width: 76px; height: 76px; background: #edf5f0; border: 1px solid #d6e8df; border-radius: 23px; color: #347765; font-size: 34px; }
+.preview-empty h2 { font-size: 24px; letter-spacing: -.6px; margin: 0 0 12px; }
+.preview-empty p { font-size: 13px; color: #657b82; line-height: 1.7; margin: 0 0 16px; }
+.preview-caption { font-size: 11px; color: #70858a; line-height: 1.6; display: block; }
+.skeleton { display: flex; gap: 14px; align-items: center; border: 1px dashed #e1e8e5; border-radius: 12px; padding: 17px; max-width: 600px; margin: 12px auto 0; }
+.skeleton > span { width: 35px; height: 35px; background: #f0f4f2; border-radius: 11px; }
+.skeleton div { flex: 1; } .skeleton i { display: block; width: 42%; height: 8px; background: #edf2ef; border-radius: 8px; } .skeleton i + i { margin-top: 9px; width: 65%; height: 6px; background: #f4f6f4; }
+.skeleton b { width: 20px; height: 7px; background: #edf2ef; border-radius: 8px; }
+.area-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 22px; }
+.area-card { padding: 25px; } .area-card ion-icon { font-size: 23px; color: #548479; } .area-card h2 { margin: 15px 0 8px; font-size: 14px; font-weight: 600; } .area-card span { font-size: 10px; color: #6d8389; }
+.back-link { margin-top: 24px; }
+@media (max-width: 900px) { .area-grid { grid-template-columns: 1fr; gap: 12px; } .area-card { display: flex; gap: 12px; align-items: center; padding: 20px; } .area-card h2 { margin: 0; } .area-card span { margin-left: auto; } }
+@media (max-width: 520px) { .section-preview { padding: 20px 17px; } .area-card { flex-wrap: wrap; } .area-card span { width: 100%; margin-left: 35px; } }

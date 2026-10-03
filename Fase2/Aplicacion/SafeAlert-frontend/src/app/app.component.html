@@ -1,3 +1,27 @@
 <ion-app>
-  <ion-router-outlet></ion-router-outlet>
+  <aside class="sidebar" aria-label="Menú principal">
+    <a class="brand" routerLink="/home" aria-label="SafeAlert, inicio">
+      <span class="brand-icon"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon></span>
+      <span>Safe<span class="brand-accent">Alert</span><small>SEGURIDAD PERSONAL</small></span>
+    </a>
+    <span class="nav-caption">TU ESPACIO SEGURO</span>
+    <nav>
+      @for (item of navigation; track item.path) {
+        <a [routerLink]="item.path" routerLinkActive="active" ariaCurrentWhenActive="page">
+          <ion-icon [name]="item.icon" aria-hidden="true"></ion-icon><span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+    <div class="sidebar-note"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon><strong>Más cerca de los tuyos.</strong><p>Tu red de confianza, a un toque de distancia.</p></div>
+    <a class="profile-link" routerLink="/profile" routerLinkActive="active" ariaCurrentWhenActive="page"><span class="avatar"><ion-icon name="person-outline" aria-hidden="true"></ion-icon></span><span>Mi perfil<small>Tu información personal</small></span><ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon></a>
+  </aside>
+  <div class="workspace">
+    <header class="app-topbar"><a class="mobile-brand" routerLink="/home"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon> SafeAlert</a><span class="topbar-caption">UN ESPACIO PARA TU TRANQUILIDAD</span><a class="topbar-profile" routerLink="/profile" aria-label="Ir a mi perfil"><ion-icon name="person-outline" aria-hidden="true"></ion-icon></a></header>
+    <div class="route-container"><ion-router-outlet></ion-router-outlet></div>
+  </div>
+  <nav class="mobile-nav" aria-label="Menú principal móvil">
+    @for (item of navigation; track item.path) {
+      <a [routerLink]="item.path" routerLinkActive="active" ariaCurrentWhenActive="page"><ion-icon [name]="item.icon" aria-hidden="true"></ion-icon><span>{{ item.label }}</span></a>
+    }
+  </nav>
 </ion-app>

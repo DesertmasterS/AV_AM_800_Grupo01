@@ -1,40 +1,49 @@
-<ion-header class="ion-no-border">
-  <ion-toolbar>
-    <ion-title>SafeAlert</ion-title>
-    <ion-buttons slot="end">
-      <ion-button routerLink="/settings">
-        <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
-      </ion-button>
-    </ion-buttons>
-  </ion-toolbar>
-</ion-header>
-
-<ion-content class="ion-padding" scroll-y="false">
-  <div class="main-container">
-    
-    <!-- Indicadores de Estado -->
-    <div class="status-indicators">
-      <ion-badge color="success">
-        <ion-icon name="location-outline"></ion-icon> GPS Listo
-      </ion-badge>
+<ion-content>
+  <main class="page-wrap">
+    <header class="page-heading welcome">
+      <div><p class="eyebrow">CONTIGO, DONDE ESTÉS</p><h1>Tu tranquilidad empieza aquí.</h1><p>Un acceso rápido a tu seguridad y a las personas que te importan.</p></div>
+      <span class="prototype-badge"><span></span> Proyecto en desarrollo</span>
+    </header>
+    <div class="home-grid">
+      <section class="panel sos-panel" aria-labelledby="sos-title">
+        <div class="panel-top"><span class="section-label"><ion-icon name="radio-outline" aria-hidden="true"></ion-icon> CENTRO DE ALERTAS</span><span class="connection" [class.online]="conexion === 'online'"><span></span>{{ conexion === 'online' ? 'Servicio disponible' : conexion === 'checking' ? 'Conectando…' : 'Sin conexión al servicio' }}</span></div>
+        <h2 id="sos-title">Si necesitas ayuda,<br>estamos a un toque.</h2>
+        <p class="sos-description">Activa una alerta desde un solo lugar.</p>
+        <div class="sos-orbit">
+          <button class="panic-btn" (click)="activarAlerta()" [disabled]="enviando" [attr.aria-busy]="enviando" aria-label="S.O.S. Registrar una alerta de emergencia">
+            <ion-icon name="alert-outline" aria-hidden="true"></ion-icon>
+            <strong>{{ enviando ? 'Enviando' : 'S.O.S' }}</strong>
+            <span>{{ enviando ? 'Espera un momento' : 'ACTIVAR ALERTA' }}</span>
+          </button>
+        </div>
+        <p class="sos-instruction">Toca el botón para registrar tu alerta</p>
+        <p class="result" [class.error]="errorAlerta" role="status" aria-live="polite">{{ resultado }}</p>
+        <div class="sos-note"><ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon><p>En esta versión se registra la alerta. La ubicación y las notificaciones a contactos están pendientes de integración.</p></div>
+      </section>
+      <aside class="support-column">
+        <section class="companion-card" aria-labelledby="companion-title">
+          <span class="card-icon"><ion-icon name="navigate-outline" aria-hidden="true"></ion-icon></span><span class="small-tag">UN CAMINO EN COMPAÑÍA</span>
+          <h2 id="companion-title">Llegar con más<br>tranquilidad.</h2><p>Un espacio para compartir tu trayecto con alguien de confianza.</p>
+          <a routerLink="/companion">Modo acompañante <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon></a>
+          <div class="route-art" aria-hidden="true"><span class="route-start"></span><span class="route-line"></span><span class="route-end"><ion-icon name="location-outline"></ion-icon></span></div>
+        </section>
+        <section class="panel readiness" aria-labelledby="readiness-title">
+          <div class="card-heading"><h2 id="readiness-title">Antes de salir</h2><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon></div>
+          <p class="muted">Prepara tu espacio de seguridad.</p>
+          <a routerLink="/emergency-contacts"><span class="step-icon"><ion-icon name="people-outline" aria-hidden="true"></ion-icon></span><span>Contactos de confianza<small>Define tu red de apoyo</small></span><ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon></a>
+          <a routerLink="/settings"><span class="step-icon"><ion-icon name="location-outline" aria-hidden="true"></ion-icon></span><span>Permisos del dispositivo<small>Ubicación y micrófono</small></span><ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon></a>
+          @if (conexion === 'offline') { <button class="retry" (click)="verificarConexion()">Comprobar conexión de nuevo</button> }
+        </section>
+      </aside>
     </div>
-
-    <!-- Botón de Pánico -->
-    <div class="button-wrapper">
-      <button class="panic-btn" (click)="activarAlerta()">
-        <ion-icon name="alert-outline"></ion-icon>
-        <span>S.O.S</span>
-      </button>
-      <p class="instruction-text">Toca para enviar alerta inmediata</p>
-    </div>
-
-    <!-- Navegación Inferior -->
-    <div class="bottom-nav">
-      <ion-button fill="clear" routerLink="/emergency-contacts">
-        <ion-icon slot="start" name="people-outline"></ion-icon>
-        Mis Contactos
-      </ion-button>
-    </div>
-
-  </div>
+    <section class="quick-access" aria-labelledby="quick-title">
+      <div class="quick-heading"><h2 id="quick-title">Tu seguridad, en un solo lugar</h2><span>ACCESOS RÁPIDOS</span></div>
+      <div class="quick-grid">
+        <a class="panel quick-card" routerLink="/emergency-contacts"><span class="quick-icon"><ion-icon name="people-outline" aria-hidden="true"></ion-icon></span><div><h3>Mis contactos</h3><p>Las personas que están para ti.</p></div><ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon></a>
+        <a class="panel quick-card" routerLink="/history"><span class="quick-icon history-icon"><ion-icon name="time-outline" aria-hidden="true"></ion-icon></span><div><h3>Historial de alertas</h3><p>Un espacio para tus registros.</p></div><ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon></a>
+        <a class="panel quick-card" routerLink="/settings"><span class="quick-icon settings-icon"><ion-icon name="settings-outline" aria-hidden="true"></ion-icon></span><div><h3>A tu manera</h3><p>Configura tu experiencia.</p></div><ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon></a>
+      </div>
+    </section>
+    <footer class="page-footer"><span><ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon> Tu privacidad es parte de tu seguridad.</span><span>SafeAlert · Seguridad personal</span></footer>
+  </main>
 </ion-content>
