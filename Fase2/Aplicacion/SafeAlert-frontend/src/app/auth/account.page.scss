@@ -1,0 +1,27 @@
+.account-wrap { max-width: 780px; }
+.account-panel { overflow: hidden; }
+.account-tabs { display: flex; padding: 7px; margin: 20px 26px 0; background: #eef3f0; border-radius: 12px; gap: 5px; }
+.account-tabs a { flex: 1; padding: 13px 8px; text-align: center; text-decoration: none; color: #647b80; font-size: 13px; border-radius: 9px; font-weight: 600; }
+.account-tabs a.selected { background: #fff; color: #236757; box-shadow: 0 2px 8px #1738440d; }
+.account-body { padding: 28px 36px 30px; }
+.account-icon { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; color: #347765; background: #edf5f0; font-size: 26px; margin-bottom: 18px; }
+h2 { font-size: 22px; letter-spacing: -.6px; margin: 0 0 10px; } .form-intro { color: #657b82; font-size: 13px; margin: 0 0 27px; line-height: 1.6; }
+.name-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.field { margin-bottom: 20px; min-width: 0; }
+label { display: block; font-size: 12px; font-weight: 650; margin-bottom: 9px; color: #294951; }
+input { width: 100%; min-width: 0; border: 1px solid #cedbd7; border-radius: 10px; padding: 14px; background: #fcfdfc; color: #173844; font: inherit; font-size: 14px; }
+input::placeholder { color: #71848a; }
+input:focus { outline: 2px solid #348b7a; outline-offset: 2px; }
+input[aria-invalid="true"] { border-color: #c54750; }
+small { display: block; color: #647c82; font-size: 11px; line-height: 1.6; margin-top: 7px; }
+.password-field { display: flex; border: 1px solid #cedbd7; border-radius: 10px; background: #fcfdfc; }
+.password-field input { border: 0; background: transparent; flex: 1; }
+.password-field button { background: transparent; border: 0; padding: 0 14px; color: #286c5d; font-size: 11px; font-weight: 650; }
+.field-error { color: #a9323e; font-size: 11px; margin: 7px 0 0; line-height: 1.6; }
+.request-error { border: 1px solid #edcdd0; background: #fff4f3; color: #9c2f3a; padding: 12px 14px; border-radius: 10px; font-size: 12px; line-height: 1.7; }
+.primary-button { background: #246d60; color: #fff; width: 100%; border: 0; border-radius: 11px; padding: 15px 18px; display: flex; align-items: center; justify-content: center; gap: 15px; font-size: 14px; font-weight: 650; }
+.primary-button:hover { background: #205b51; } .primary-button:disabled { opacity: .65; }
+.switch-account { font-size: 12px; line-height: 1.7; text-align: center; margin: 24px 0 0; color: #647b82; }
+.switch-account a { color: #246d60; font-weight: 650; text-decoration: none; }
+.back-link { margin-top: 22px; }
+@media (max-width: 520px) { .account-body { padding: 24px 20px; } .account-tabs { margin: 16px 16px 0; } .name-grid { grid-template-columns: 1fr; gap: 0; } input { font-size: 16px; } }

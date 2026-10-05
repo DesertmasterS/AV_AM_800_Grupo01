@@ -1,3 +1,5 @@
 export const environment = {
-  production: true
+  production: true,
+  // El servidor web debe reenviar /api al backend NestJS.
+  apiUrl: '/api',
 };

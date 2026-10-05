@@ -1,0 +1,16 @@
+<ion-content>
+  <main class="page-wrap">
+    <header class="page-heading"><p class="eyebrow">TU ESPACIO PERSONAL</p><h1>Mi perfil</h1><p>Tu cuenta y tus datos personales, en un solo lugar.</p></header>
+    @if (auth.verificando()) { <p class="session-message" role="status">Verificando tu sesión…</p> }
+    @if (auth.errorSesion()) { <p class="session-message warning" role="status">{{ auth.errorSesion() }}</p> }
+    @if (auth.usuario(); as usuario) {
+      <section class="panel identity-card"><span class="profile-avatar"><ion-icon name="person-outline" aria-hidden="true"></ion-icon></span><div><span class="session-tag">SESIÓN INICIADA</span><h2>{{ usuario.nombre }} {{ usuario.apellido }}</h2><p>{{ usuario.email }}</p></div><button class="logout-button" (click)="cerrarSesion()" [disabled]="cerrando()">{{ cerrando() ? 'Cerrando…' : 'Cerrar sesión' }}</button></section>
+      @if (error()) { <p class="session-message warning" role="alert">{{ error() }}</p> }
+      <section class="panel data-panel"><div class="data-heading"><h2>Datos de mi cuenta</h2><span>Información personal</span></div><dl class="data-grid"><div><dt>Nombre</dt><dd>{{ usuario.nombre }}</dd></div><div><dt>Apellido</dt><dd>{{ usuario.apellido }}</dd></div><div><dt>Número de teléfono</dt><dd>{{ usuario.telefono }}</dd></div><div><dt>Correo electrónico</dt><dd>{{ usuario.email }}</dd></div></dl></section>
+    } @else {
+      <section class="panel guest-card"><span class="profile-avatar"><ion-icon name="person-outline" aria-hidden="true"></ion-icon></span><span class="session-tag">TU CUENTA PERSONAL</span><h2>Conecta con tu espacio seguro.</h2><p>Inicia sesión para ver los datos de tu cuenta. Si aún no tienes una, puedes crearla en unos pasos.</p><a class="login-button" routerLink="/login">Iniciar sesión <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon></a><p class="register-link">¿Aún no tienes cuenta? <a routerLink="/register">Crear una cuenta</a></p></section>
+      <section class="panel data-panel"><div class="data-heading"><h2>Datos de mi cuenta</h2><span>Inicia sesión para verlos</span></div><dl class="data-grid"><div><dt>Nombre</dt><dd class="empty-data">Sin sesión iniciada</dd></div><div><dt>Apellido</dt><dd class="empty-data">Sin sesión iniciada</dd></div><div><dt>Número de teléfono</dt><dd class="empty-data">Sin sesión iniciada</dd></div><div><dt>Correo electrónico</dt><dd class="empty-data">Sin sesión iniciada</dd></div></dl></section>
+    }
+    <footer class="page-footer"><span><ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon> Tu privacidad es parte de tu seguridad.</span><span>SafeAlert · Seguridad personal</span></footer>
+  </main>
+</ion-content>

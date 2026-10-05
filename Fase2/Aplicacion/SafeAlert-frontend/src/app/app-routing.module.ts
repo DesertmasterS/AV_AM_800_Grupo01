@@ -36,13 +36,10 @@ const routes: Routes = [
     ] },
   },
   {
-    path: 'profile', loadComponent: () => import('./views/section.page').then(m => m.SectionPage),
-    data: { title: 'Mi perfil', eyebrow: 'TU ESPACIO PERSONAL', description: 'administrar tu información personal y tu cuenta.', icon: 'person-outline', areas: [
-      { title: 'Información personal', icon: 'person-outline' },
-      { title: 'Acceso y cuenta', icon: 'shield-checkmark-outline' },
-      { title: 'Consentimiento y términos', icon: 'lock-closed-outline' },
-    ] },
+    path: 'profile', loadComponent: () => import('./auth/profile.page').then(m => m.ProfilePage),
   },
+  { path: 'login', loadComponent: () => import('./auth/account.page').then(m => m.AccountPage), data: { registro: false } },
+  { path: 'register', loadComponent: () => import('./auth/account.page').then(m => m.AccountPage), data: { registro: true } },
   { path: '', redirectTo: 'home', pathMatch: 'full' },
   { path: '**', redirectTo: 'home' },
 ];

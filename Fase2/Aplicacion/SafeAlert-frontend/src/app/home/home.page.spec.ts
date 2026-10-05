@@ -47,7 +47,7 @@ describe('HomePage', () => {
     response.complete();
     expect(component.enviando).toBe(false);
     expect(component.resultado).toContain('#12');
-    expect(component.resultado).toContain('aún no está disponible');
+    expect(component.errorAlerta).toBe(false);
   });
 
   it('informa el fallo y permite reintentar sin afirmar que hubo notificaciones', () => {

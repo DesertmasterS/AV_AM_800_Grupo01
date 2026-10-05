@@ -1,0 +1,28 @@
+<ion-content>
+  <main class="page-wrap account-wrap">
+    <header class="page-heading"><p class="eyebrow">TU CUENTA SAFEALERT</p><h1>{{ registro ? 'Crea tu cuenta.' : 'Qué bueno tenerte aquí.' }}</h1><p>{{ registro ? 'Completa tus datos para dar el primer paso con tu red de confianza.' : 'Inicia sesión para acceder a tu información personal.' }}</p></header>
+    <section class="panel account-panel">
+      <nav class="account-tabs" aria-label="Acceso a la cuenta"><a routerLink="/login" [class.selected]="!registro" [attr.aria-current]="!registro ? 'page' : null">Iniciar sesión</a><a routerLink="/register" [class.selected]="registro" [attr.aria-current]="registro ? 'page' : null">Crear cuenta</a></nav>
+      <div class="account-body">
+        <span class="account-icon"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon></span>
+        <h2>{{ registro ? 'Tus datos, en un solo lugar' : 'Bienvenido a SafeAlert' }}</h2>
+        <p class="form-intro">{{ registro ? 'Todos los campos son obligatorios.' : 'Ingresa el correo y la clave de tu cuenta.' }}</p>
+        <form [formGroup]="form" (ngSubmit)="enviar()" novalidate>
+          @if (registro) {
+            <div class="name-grid">
+              <div class="field"><label for="nombre">Nombre</label><input id="nombre" formControlName="nombre" autocomplete="given-name" maxlength="100" placeholder="Tu nombre" [attr.aria-invalid]="invalido('nombre')" aria-describedby="nombre-error" required>@if (invalido('nombre')) { <p id="nombre-error" class="field-error">Ingresa un nombre de 2 a 100 caracteres.</p> }</div>
+              <div class="field"><label for="apellido">Apellido</label><input id="apellido" formControlName="apellido" autocomplete="family-name" maxlength="100" placeholder="Tu apellido" [attr.aria-invalid]="invalido('apellido')" aria-describedby="apellido-error" required>@if (invalido('apellido')) { <p id="apellido-error" class="field-error">Ingresa un apellido de 2 a 100 caracteres.</p> }</div>
+            </div>
+            <div class="field"><label for="telefono">Número de teléfono</label><input id="telefono" type="tel" formControlName="telefono" autocomplete="tel" placeholder="+56 9 1234 5678" [attr.aria-invalid]="invalido('telefono')" aria-describedby="telefono-help telefono-error" required><small id="telefono-help">Incluye el código de país. Ejemplo: +56 9 1234 5678.</small>@if (invalido('telefono')) { <p id="telefono-error" class="field-error">Ingresa un teléfono válido con código de país.</p> }</div>
+          }
+          <div class="field"><label [attr.for]="fieldPrefix + '-email'">Correo electrónico</label><input [id]="fieldPrefix + '-email'" type="email" formControlName="email" autocomplete="email" inputmode="email" maxlength="150" placeholder="tu@correo.cl" [attr.aria-invalid]="invalido('email')" [attr.aria-describedby]="fieldPrefix + '-email-error'" required>@if (invalido('email')) { <p [id]="fieldPrefix + '-email-error'" class="field-error">Ingresa un correo electrónico válido.</p> }</div>
+          <div class="field"><label [attr.for]="fieldPrefix + '-password'">{{ registro ? 'Crea una clave' : 'Clave' }}</label><div class="password-field"><input [id]="fieldPrefix + '-password'" [type]="mostrarClave() ? 'text' : 'password'" formControlName="password" [attr.autocomplete]="registro ? 'new-password' : 'current-password'" maxlength="128" [placeholder]="registro ? 'Al menos 8 caracteres' : 'Tu clave'" [attr.aria-invalid]="invalido('password')" [attr.aria-describedby]="fieldPrefix + '-password-help ' + fieldPrefix + '-password-error'" required><button type="button" (click)="mostrarClave.set(!mostrarClave())" [attr.aria-pressed]="mostrarClave()" [attr.aria-label]="mostrarClave() ? 'Ocultar clave' : 'Mostrar clave'">{{ mostrarClave() ? 'Ocultar' : 'Mostrar' }}</button></div>@if (registro) { <small [id]="fieldPrefix + '-password-help'">Usa entre 8 y 128 caracteres.</small> }@if (invalido('password')) { <p [id]="fieldPrefix + '-password-error'" class="field-error">{{ registro ? 'La clave debe tener entre 8 y 128 caracteres.' : 'Ingresa tu clave.' }}</p> }</div>
+          @if (error()) { <p class="request-error" role="alert">{{ error() }}</p> }
+          <button class="primary-button" type="submit" [disabled]="enviando()" [attr.aria-busy]="enviando()">{{ enviando() ? 'Conectando…' : registro ? 'Crear mi cuenta' : 'Iniciar sesión' }}<ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon></button>
+        </form>
+        <p class="switch-account">{{ registro ? '¿Ya tienes una cuenta?' : '¿Es tu primera vez aquí?' }} <a [routerLink]="registro ? '/login' : '/register'">{{ registro ? 'Inicia sesión' : 'Crea una cuenta' }}</a></p>
+      </div>
+    </section>
+    <a class="text-link back-link" routerLink="/profile">Volver a mi perfil <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon></a>
+  </main>
+</ion-content>
