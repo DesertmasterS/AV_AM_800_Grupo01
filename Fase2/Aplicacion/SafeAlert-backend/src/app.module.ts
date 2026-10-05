@@ -1,15 +1,21 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { Usuario } from './database/entities/usuario.entity';
+import { ContactoEmergencia } from './database/entities/contacto-emergencia.entity';
+import { Cuartel } from './database/entities/cuartel.entity';
+import { Alerta } from './database/entities/alerta.entity';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { Alerta } from './database/entities/alerta.entity';
 
 @Module({
   imports: [
+    // Lectura del archivo .env
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+
+    // Conexión con PostgreSQL en Neon.tech
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -20,14 +26,16 @@ import { Alerta } from './database/entities/alerta.entity';
         username: config.get<string>('DB_USER'),
         password: config.get<string>('DB_PASSWORD'),
         database: config.get<string>('DB_NAME'),
-        autoLoadEntities: true,
-        synchronize: true, // Sincroniza tablas automáticamente en desarrollo
         ssl: {
-          rejectUnauthorized: false, // Requerido para Neon en la nube
+          rejectUnauthorized: false, // Requerido por Neon.tech
         },
+        entities: [Usuario, ContactoEmergencia, Cuartel, Alerta],
+        synchronize: false,
       }),
     }),
-    TypeOrmModule.forFeature([Alerta]),
+
+    // Inyección de repositorios en el módulo
+    TypeOrmModule.forFeature([Usuario, ContactoEmergencia, Cuartel, Alerta]),
   ],
   controllers: [AppController],
   providers: [AppService],

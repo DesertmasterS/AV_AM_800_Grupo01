@@ -15,12 +15,12 @@ export class ApiService {
 
   private readonly http = inject(HttpClient);
 
-  // Consulta el endpoint "/" que devuelve texto plano ("Hello World!")
+  // Consultar el endpoint "/" 
   probarConexion(): Observable<string> {
     return this.http.get(this.apiUrl, { responseType: 'text' });
   }
-  // 
-  enviarAlerta(): Observable<AlertaRegistrada> {
-    return this.http.post<AlertaRegistrada>(`${this.apiUrl}/alerta`, {});
+  // Se hace opcional la notificación a carabineros
+  enviarAlerta(datos?: { latitud?: number; longitud?: number; notificarPolicia?: boolean }) {
+    return this.http.post<any>(`${this.apiUrl}/alerta`, datos ?? {});
   }
 }
