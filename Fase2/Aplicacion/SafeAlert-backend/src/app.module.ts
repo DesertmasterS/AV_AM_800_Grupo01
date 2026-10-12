@@ -1,21 +1,28 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+
+// Entidades
 import { Usuario } from './database/entities/usuario.entity';
 import { ContactoEmergencia } from './database/entities/contacto-emergencia.entity';
 import { Cuartel } from './database/entities/cuartel.entity';
 import { Alerta } from './database/entities/alerta.entity';
+
+// Módulo de Autenticación
+import { AuthModule } from './auth/auth.module';
+
+// Controlador y Servicio principales
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
 @Module({
   imports: [
-    // Lectura del archivo .env
+    // 1. Lectura del archivo .env
     ConfigModule.forRoot({
       isGlobal: true,
     }),
 
-    // Conexión con PostgreSQL en Neon.tech
+    // 2. Conexión con PostgreSQL en Neon.tech
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -34,8 +41,11 @@ import { AppService } from './app.service';
       }),
     }),
 
-    // Inyección de repositorios en el módulo
+    // 3. Repositorios accesibles por AppService
     TypeOrmModule.forFeature([Usuario, ContactoEmergencia, Cuartel, Alerta]),
+
+    // 4. Módulo de Autenticación (Login, Register, Me, Logout)
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
