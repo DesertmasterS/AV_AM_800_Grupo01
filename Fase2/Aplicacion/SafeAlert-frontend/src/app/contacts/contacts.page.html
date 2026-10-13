@@ -1,0 +1,52 @@
+<ion-content>
+  <main class="page-wrap">
+    <header class="page-heading heading"><div><p class="eyebrow">TU RED DE CONFIANZA</p><h1>Las personas que están para ti.</h1><p>Organiza tus contactos de emergencia y mantén sus datos a mano.</p></div><button class="add" (click)="nuevoContacto()" aria-controls="contact-form"><ion-icon name="person-add-outline" aria-hidden="true"></ion-icon> Agregar contacto <span>+</span></button></header>
+    <section class="network"><span class="network-icon"><ion-icon name="people-outline" aria-hidden="true"></ion-icon></span><div><span class="banner-eyebrow">TU CÍRCULO DE APOYO</span><h2>La tranquilidad también se comparte.</h2><p>Elige personas de confianza y conversa con ellas sobre cómo ayudarte.</p></div><div class="total"><strong>{{ estado() === 'ready' ? contactos().length : '—' }}</strong><span>{{ demo() ? 'contactos de ejemplo' : 'contactos en tu red' }}</span></div></section>
+    @if (demo()) { <div class="notice demo-notice" role="status"><ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon><div><strong>Estás explorando un ejemplo</strong><p>Los datos son ficticios. Puedes probar agregar, editar y eliminar; los cambios se pierden al recargar y solo existen en esta vista.</p></div><button (click)="cargar()" [disabled]="guardando() || eliminando()">Ver mi cuenta</button></div> }
+    @if (mensaje()) { <p class="feedback success" role="status">{{ mensaje() }}</p> }
+    @if (error()) { <p class="feedback failure" role="alert">{{ error() }}</p> }
+    <div class="contacts-grid">
+      <section class="panel list-panel" aria-labelledby="list-title">
+        <div class="list-head"><div><h2 id="list-title">Mis contactos</h2><p>Tu apoyo más cercano.</p></div><span class="count-badge">{{ estado() === 'ready' ? contactos().length : '—' }}</span></div>
+        <label class="search" for="contact-search"><ion-icon name="search-outline" aria-hidden="true"></ion-icon><input id="contact-search" type="search" placeholder="Buscar por nombre, teléfono o relación" aria-label="Buscar contactos" [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" [disabled]="estado() !== 'ready'"></label>
+        @if (estado() === 'loading') {
+          <div class="empty" role="status"><span class="empty-icon"><ion-icon name="time-outline" aria-hidden="true"></ion-icon></span><h3>Cargando tu red…</h3><p>Estamos consultando tus contactos.</p></div>
+        } @else if (estado() === 'unauthorized') {
+          <div class="empty"><span class="empty-icon"><ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon></span><h3>Tu red tiene un espacio privado.</h3><p>Inicia sesión para consultar y guardar tus contactos de emergencia.</p><a class="primary-link" routerLink="/login">Iniciar sesión <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon></a><button class="example" (click)="verEjemplo()">Explorar un ejemplo</button></div>
+        } @else if (estado() === 'error') {
+          <div class="empty"><span class="empty-icon"><ion-icon name="people-outline" aria-hidden="true"></ion-icon></span><h3>Tu red, a un paso de estar aquí.</h3><p>El servicio de contactos aún no está disponible o no pudimos conectarnos. Tus datos no se han cargado.</p><button class="primary-link" (click)="cargar()">Volver a intentar <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon></button><button class="example" (click)="verEjemplo()">Explorar un ejemplo</button></div>
+        } @else if (!contactos().length) {
+          <div class="empty"><span class="empty-icon"><ion-icon name="people-outline" aria-hidden="true"></ion-icon></span><h3>Empieza con alguien de confianza.</h3><p>Agrega tu primer contacto usando el formulario. Su nombre y teléfono quedarán en tu red de apoyo.</p><button class="text-link empty-add" (click)="nuevoContacto()" aria-controls="contact-form">Agregar mi primer contacto <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon></button></div>
+        } @else if (!filtrados().length) {
+          <div class="empty"><h3>No encontramos coincidencias.</h3><p>Prueba con otro nombre, número o relación.</p><button class="example" (click)="busqueda.set('')">Limpiar búsqueda</button></div>
+        } @else {
+          <div class="contact-list">
+            @for (contacto of filtrados(); track contacto.id) {
+              <article class="contact" [class.editing]="editando() === contacto.id"><div class="contact-top"><span class="avatar">{{ iniciales(contacto.nombre) }}</span><div class="identity"><h3>{{ contacto.nombre }}</h3><span class="relation">{{ contacto.relacion || 'Persona de confianza' }}</span></div>@if (demo()) { <span class="tag">Ejemplo</span> }</div><div class="phone"><ion-icon name="call-outline" aria-hidden="true"></ion-icon><span>{{ contacto.telefono }}</span></div><div class="actions"><button (click)="editar(contacto)" [disabled]="guardando() || eliminando()" [attr.aria-label]="'Editar a ' + contacto.nombre">Editar datos <ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon></button><button class="remove-contact" (click)="porEliminar.set(contacto)" [disabled]="guardando() || eliminando()" [attr.aria-label]="'Eliminar a ' + contacto.nombre">Eliminar</button></div>
+                @if (porEliminar()?.id === contacto.id) { <div class="confirm" role="group" [attr.aria-label]="'Confirmar eliminación de ' + contacto.nombre"><p>¿Eliminar a {{ contacto.nombre }} de {{ demo() ? 'este ejemplo' : 'tu red' }}?</p><div><button (click)="porEliminar.set(null)" [disabled]="eliminando()">Cancelar</button><button class="confirm-delete" (click)="confirmarEliminar()" [disabled]="eliminando()">{{ eliminando() ? 'Eliminando…' : 'Sí, eliminar' }}</button></div></div> }
+              </article>
+            }
+          </div>
+        }
+        <div class="list-note"><ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon><span>{{ demo() ? 'Los contactos mostrados son ficticios.' : 'Solo los contactos de tu cuenta aparecen aquí.' }}</span></div>
+      </section>
+      <aside class="editor">
+        <section class="panel form-panel" id="contact-form" #contactEditor aria-labelledby="form-title">
+          <span class="form-icon"><ion-icon name="person-add-outline" aria-hidden="true"></ion-icon></span><p class="eyebrow">{{ editando() !== null ? 'CUIDA TU RED' : 'AMPLÍA TU CÍRCULO' }}</p><h2 id="form-title">{{ editando() !== null ? 'Editar contacto' : 'Agregar contacto' }}</h2><p class="description">Un nombre y un teléfono para estar más cerca.</p>
+          <form [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+            <fieldset [disabled]="guardando() || eliminando() || estado() === 'loading' || estado() === 'unauthorized'">
+              <div class="field"><label for="contact-name">Nombre del contacto <span>*</span></label><input id="contact-name" formControlName="nombre" autocomplete="off" maxlength="100" placeholder="Nombre y apellido" required [attr.aria-invalid]="invalido('nombre')" aria-describedby="contact-name-error">@if (invalido('nombre')) { <p class="field-error" id="contact-name-error">Ingresa un nombre de 2 a 100 caracteres.</p> }</div>
+              <div class="field"><label for="phone">Número de teléfono <span>*</span></label><input id="phone" type="tel" formControlName="telefono" autocomplete="off" placeholder="+56 9 1234 5678" required [attr.aria-invalid]="invalido('telefono')" aria-describedby="phone-help phone-error"><small id="phone-help">Incluye el código de país, por ejemplo +56.</small>@if (invalido('telefono')) { <p class="field-error" id="phone-error">Ingresa un teléfono válido con código de país.</p> }</div>
+              <div class="field"><label for="contact-relation">Relación <span class="optional">Opcional</span></label><input id="contact-relation" formControlName="relacion" maxlength="50" placeholder="Ej. familiar, amigo, pareja" autocomplete="off" [attr.aria-invalid]="invalido('relacion')" aria-describedby="contact-relation-error">@if (invalido('relacion')) { <p class="field-error" id="contact-relation-error">Usa hasta 50 caracteres.</p> }</div>
+              <button class="save" type="submit" [disabled]="estado() !== 'ready'" [attr.aria-busy]="guardando()">{{ guardando() ? 'Guardando…' : editando() !== null ? 'Guardar cambios' : demo() ? 'Agregar al ejemplo' : 'Guardar contacto' }}<ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon></button>
+              @if (editando() !== null) { <button class="cancel" type="button" (click)="cancelarEdicion()">Cancelar edición</button> }
+            </fieldset>
+          </form>
+          <p class="footnote">{{ demo() ? 'Modo de ejemplo: no se guardan datos en el servidor.' : estado() !== 'ready' ? 'Conecta con tu cuenta o explora un ejemplo para probar el formulario.' : 'Los cambios se confirman cuando el servidor responde.' }}</p>
+        </section>
+        <section class="care-card"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon><h2>Una red que se conoce.</h2><p>Antes de agregar a alguien, explícale que será parte de tus contactos de emergencia y verifica que su teléfono esté actualizado.</p><span>Notificaciones de emergencia</span><p class="pending">El envío de alertas a estos contactos se integrará en una siguiente etapa.</p></section>
+      </aside>
+    </div>
+    <footer class="page-footer"><span><ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon> Tu privacidad es parte de tu seguridad.</span><span>SafeAlert · Seguridad personal</span></footer>
+  </main>
+</ion-content>

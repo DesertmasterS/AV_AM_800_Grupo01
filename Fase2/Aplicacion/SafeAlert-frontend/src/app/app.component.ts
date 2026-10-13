@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { addIcons } from 'ionicons';
-import { shieldCheckmarkOutline, homeOutline, peopleOutline, navigateOutline, timeOutline, settingsOutline, personOutline, arrowForwardOutline, chevronForwardOutline, locationOutline, checkmarkOutline, alertOutline, radioOutline, lockClosedOutline, closeOutline, informationCircleOutline } from 'ionicons/icons';
+import { shieldCheckmarkOutline, homeOutline, peopleOutline, navigateOutline, timeOutline, settingsOutline, personOutline, arrowForwardOutline, chevronForwardOutline, locationOutline, checkmarkOutline, alertOutline, radioOutline, lockClosedOutline, closeOutline, informationCircleOutline, callOutline, searchOutline, personAddOutline } from 'ionicons/icons';
 @Component({
   selector: 'app-root', templateUrl: 'app.component.html',
   styleUrls: ['app.component.scss'], standalone: false,
@@ -14,6 +14,6 @@ export class AppComponent {
     { path: '/settings', label: 'Ajustes', icon: 'settings-outline' },
   ];
   constructor() {
-    addIcons({ shieldCheckmarkOutline, homeOutline, peopleOutline, navigateOutline, timeOutline, settingsOutline, personOutline, arrowForwardOutline, chevronForwardOutline, locationOutline, checkmarkOutline, alertOutline, radioOutline, lockClosedOutline, closeOutline, informationCircleOutline });
+    addIcons({ shieldCheckmarkOutline, homeOutline, peopleOutline, navigateOutline, timeOutline, settingsOutline, personOutline, arrowForwardOutline, chevronForwardOutline, locationOutline, checkmarkOutline, alertOutline, radioOutline, lockClosedOutline, closeOutline, informationCircleOutline, callOutline, searchOutline, personAddOutline });
   }
 }

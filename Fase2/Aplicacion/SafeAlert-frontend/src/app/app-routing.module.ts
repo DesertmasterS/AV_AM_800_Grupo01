@@ -4,12 +4,7 @@ import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
 const routes: Routes = [
   { path: 'home', loadChildren: () => import('./home/home.module').then(m => m.HomePageModule) },
   {
-    path: 'emergency-contacts', loadComponent: () => import('./views/section.page').then(m => m.SectionPage),
-    data: { title: 'Mis contactos', eyebrow: 'TU RED DE CONFIANZA', description: 'organizar tus contactos de emergencia.', icon: 'people-outline', areas: [
-      { title: 'Contactos de emergencia', icon: 'people-outline' },
-      { title: 'Agregar un contacto', icon: 'person-outline' },
-      { title: 'Prioridad de notificación', icon: 'radio-outline' },
-    ] },
+    path: 'emergency-contacts', loadComponent: () => import('./contacts/contacts.page').then(m => m.ContactsPage),
   },
   {
     path: 'companion', loadComponent: () => import('./views/section.page').then(m => m.SectionPage),
