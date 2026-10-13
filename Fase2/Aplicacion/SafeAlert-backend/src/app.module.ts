@@ -8,8 +8,9 @@ import { ContactoEmergencia } from './database/entities/contacto-emergencia.enti
 import { Cuartel } from './database/entities/cuartel.entity';
 import { Alerta } from './database/entities/alerta.entity';
 
-// Módulo de Autenticación
+// Módulos funcionales
 import { AuthModule } from './auth/auth.module';
+import { AlertasModule } from './alertas/alertas.module'; 
 
 // Controlador y Servicio principales
 import { AppController } from './app.controller';
@@ -22,7 +23,7 @@ import { AppService } from './app.service';
       isGlobal: true,
     }),
 
-    // 2. Conexión con PostgreSQL en Neon.tech
+    // 2. Conexión global con PostgreSQL en Neon.tech
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -34,18 +35,16 @@ import { AppService } from './app.service';
         password: config.get<string>('DB_PASSWORD'),
         database: config.get<string>('DB_NAME'),
         ssl: {
-          rejectUnauthorized: false, // Requerido por Neon.tech
+          rejectUnauthorized: false,
         },
         entities: [Usuario, ContactoEmergencia, Cuartel, Alerta],
         synchronize: false,
       }),
     }),
 
-    // 3. Repositorios accesibles por AppService
-    TypeOrmModule.forFeature([Usuario, ContactoEmergencia, Cuartel, Alerta]),
-
-    // 4. Módulo de Autenticación (Login, Register, Me, Logout)
+    // 3. Módulos de la aplicación
     AuthModule,
+    AlertasModule, //
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -6,10 +6,10 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // 1. Parser de cookies
+  // 1. Parser de cookies para la sesión JWT
   app.use(cookieParser());
 
-  // 2. Tubería de validación global (aplica los decoradores del DTO y rechaza campos extra)
+  // 2. Validación global de DTOs
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -18,12 +18,15 @@ async function bootstrap() {
     }),
   );
 
-  // 3. CORS estricto con credenciales para intercambio de cookies
+  // 3. CORS preparado para Navegador y Celular (Capacitor)
   app.enableCors({
     origin: [
-      'http://localhost:8100', // Ionic Serve predeterminado
-      'http://localhost:4200', // Angular CLI
+      'http://localhost:8100',      // Ionic Serve (navegador)
+      'http://localhost:4200',      // Angular CLI
       'http://127.0.0.1:8100',
+      'capacitor://localhost',       // Capacitor en iOS / Android clásico
+      'https://localhost',          // Capacitor en Android moderno
+      'http://localhost',
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -31,7 +34,8 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  
+  await app.listen(port, '0.0.0.0');
   console.log(`Servidor SafeAlert corriendo en http://localhost:${port}`);
 }
 bootstrap();

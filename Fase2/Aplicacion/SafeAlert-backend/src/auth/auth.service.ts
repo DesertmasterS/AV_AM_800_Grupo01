@@ -57,7 +57,7 @@ export class AuthService {
   async login(dto: LoginDto): Promise<{ usuario: UsuarioPublicoDto; token: string }> {
     const emailNorm = dto.email.trim().toLowerCase();
 
-    // Consultar explícitamente passwordHash porque tiene select: false
+    // Consultar  passwordHash
     const usuario = await this.usuarioRepo
       .createQueryBuilder('usuario')
       .addSelect('usuario.passwordHash')
