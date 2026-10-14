@@ -21,7 +21,7 @@ async function bootstrap() {
   // 3. CORS preparado para Navegador y Celular (Capacitor)
   app.enableCors({
     origin: [
-      'http://localhost:8100',      // Ionic Serve (navegador)
+      'http://localhost:8100',      // Ionic Serve
       'http://localhost:4200',      // Angular CLI
       'http://127.0.0.1:8100',
       'capacitor://localhost',       // Capacitor en iOS / Android clásico

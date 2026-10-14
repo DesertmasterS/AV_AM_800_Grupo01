@@ -40,7 +40,7 @@ export class RegisterDto {
   @IsString()
   @IsNotEmpty()
   @Length(8, 128)
-  password: string; // Sin trim para respetar espacios intencionales
+  password: string; 
 }
 
 export class LoginDto {
