@@ -64,7 +64,11 @@ export class HardwareSosService {
       },
       error: async (err) => {
         this.enviando = false;
-        console.error('Error enviando alerta SOS por hardware:', err);
+        console.error('Error enviando alerta SOS por hardware:', {
+          status: err?.status,
+          message: err?.message,
+          error: err?.error,
+        });
         await this.mostrarAviso(
           'Error al emitir alerta de emergencia',
           'warning'
