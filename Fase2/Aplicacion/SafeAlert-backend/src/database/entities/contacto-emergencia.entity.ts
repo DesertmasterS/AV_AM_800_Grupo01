@@ -12,8 +12,8 @@ export class ContactoEmergencia {
   @Column({ length: 20 })
   telefono: string;
 
-  @Column({ length: 50, nullable: true })
-  relacion: string;
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  relacion: string | null;
 
   @ManyToOne(() => Usuario, (usuario) => usuario.contactos, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'usuario_id' })

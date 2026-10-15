@@ -11,10 +11,13 @@ import { Alerta } from './database/entities/alerta.entity';
 // Módulos funcionales
 import { AuthModule } from './auth/auth.module';
 import { AlertasModule } from './alertas/alertas.module'; 
+import { ContactosEmergenciaModule } from './contactos-emergencia/contacto-emergencia.module';
 
 // Controlador y Servicio principales
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+
+
 
 @Module({
   imports: [
@@ -44,7 +47,8 @@ import { AppService } from './app.service';
 
     // 3. Módulos de la aplicación
     AuthModule,
-    AlertasModule, //
+    AlertasModule,
+    ContactosEmergenciaModule,
   ],
   controllers: [AppController],
   providers: [AppService],

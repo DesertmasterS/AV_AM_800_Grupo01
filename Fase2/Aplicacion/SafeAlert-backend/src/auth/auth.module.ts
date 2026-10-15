@@ -22,6 +22,6 @@ import { AuthGuard } from './auth.guard'; // <-- Importar el Guard
   ],
   controllers: [AuthController],
   providers: [AuthService, AuthGuard],
-  exports: [AuthService, AuthGuard, JwtModule], // <-- Exportar para otros módulos
+  exports: [AuthService, AuthGuard, JwtModule], // 
 })
 export class AuthModule {}
