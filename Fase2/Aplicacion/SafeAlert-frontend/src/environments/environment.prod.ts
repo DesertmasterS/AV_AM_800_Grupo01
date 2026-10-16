@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'http://127.0.0.1:3000',
+  apiUrl: 'https://safealert-api-299712175128.southamerica-west1.run.app',
 };
