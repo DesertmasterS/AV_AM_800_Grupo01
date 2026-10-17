@@ -15,4 +15,7 @@ export interface UsuarioSesion {
   telefono: string;
   email: string;
 }
-export interface SesionResponse { usuario: UsuarioSesion; }
+export interface SesionResponse {
+  usuario: UsuarioSesion;
+  token?: string;
+}

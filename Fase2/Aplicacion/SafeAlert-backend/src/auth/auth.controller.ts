@@ -27,13 +27,13 @@ export class AuthController {
     const isProd = process.env.NODE_ENV === 'production';
     res.cookie(COOKIE_NAME, token, {
       httpOnly: true,
-      secure: isProd, // En producción será true (requiere HTTPS, Cloud Run lo tiene)
-      sameSite: isProd ? 'none' : 'lax', // <-- El cambio clave ('none' en vez de 'strict')
+      secure: isProd, 
+      sameSite: isProd ? 'none' : 'lax', 
       maxAge: 7 * 24 * 60 * 60 * 1000, 
       path: '/',
     });
   }
-  @Post('register')
+@Post('register')
   @HttpCode(HttpStatus.CREATED) // 201
   async register(
     @Body() dto: RegisterDto,
@@ -41,7 +41,7 @@ export class AuthController {
   ) {
     const { usuario, token } = await this.authService.registrar(dto);
     this.setSessionCookie(res, token);
-    return { usuario };
+    return { usuario, token }; 
   }
 
   @Post('login')
@@ -52,7 +52,7 @@ export class AuthController {
   ) {
     const { usuario, token } = await this.authService.login(dto);
     this.setSessionCookie(res, token);
-    return { usuario };
+    return { usuario, token }; 
   }
 
   @Get('me')
@@ -66,21 +66,9 @@ export class AuthController {
     try {
       const payload = this.jwtService.verify(token);
       const usuario = await this.authService.obtenerPerfilPorId(payload.sub);
-      return { usuario };
+      return { usuario, token }; 
     } catch {
       throw new UnauthorizedException('Sesión inválida o expirada');
     }
-  }
-
-  @Post('logout')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async logout(@Res({ passthrough: true }) res: Response) {
-    const isProd = process.env.NODE_ENV === 'production';
-    res.clearCookie(COOKIE_NAME, {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? 'none' : 'lax', // <-- Aplicar también aquí para poder borrarla
-      path: '/',
-    });
   }
 }
