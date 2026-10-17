@@ -54,7 +54,7 @@ export class HardwareSosService {
   private ejecutarAlertaSos(): void {
     this.enviando = true;
 
-    this.apiService.enviarAlerta({ notificarPolicia: true }).subscribe({
+    this.apiService.enviarAlerta({ notificarPolicia: true, origen: 'VOLUMEN' }).subscribe({
       next: async (res) => {
         this.enviando = false;
         await this.mostrarAviso(

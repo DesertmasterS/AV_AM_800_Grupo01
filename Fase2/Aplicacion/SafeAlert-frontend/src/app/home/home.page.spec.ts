@@ -6,7 +6,8 @@ import { Subject, of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HomePage } from './home.page';
 import { ApiService, AlertaRegistrada } from '../services/api';
-import { AppComponent } from '../app.component';
+import { addIcons } from 'ionicons';
+import * as icons from 'ionicons/icons';
 
 describe('HomePage', () => {
   let component: HomePage;
@@ -15,7 +16,7 @@ describe('HomePage', () => {
   const toast = { create: vi.fn().mockResolvedValue({ present: vi.fn().mockResolvedValue(undefined) }) };
 
   beforeEach(async () => {
-    new AppComponent();
+    addIcons(icons);
     vi.clearAllMocks();
     api.probarConexion.mockReturnValue(of('OK'));
     await TestBed.configureTestingModule({

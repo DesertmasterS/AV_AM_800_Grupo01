@@ -27,7 +27,8 @@ export class AlertasController {
 
   @Get('historial')
   @HttpCode(HttpStatus.OK)
-  async obtenerHistorial() {
-    return await this.alertasService.obtenerHistorial();
+  async obtenerHistorial(@Req() req: Request) {
+    const usuarioId = (req as Request & { user: { sub: number } }).user?.sub;
+    return await this.alertasService.obtenerHistorial(usuarioId);
   }
 }

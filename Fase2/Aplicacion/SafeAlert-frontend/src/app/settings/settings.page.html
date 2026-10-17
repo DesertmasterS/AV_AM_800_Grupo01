@@ -1,0 +1,27 @@
+<ion-content>
+  <main class="page-wrap">
+    <header class="page-heading"><p class="eyebrow">TU SEGURIDAD, A TU MANERA</p><h1>Ajustes de seguridad</h1><p>Decide cómo quieres activar tu red de apoyo.</p></header>
+    <section class="panel motion-card" aria-labelledby="motion-title">
+      <div class="motion-heading"><span class="motion-icon"><ion-icon name="radio-outline" aria-hidden="true"></ion-icon></span><div><p class="eyebrow">PROTECCIÓN EN ANDROID</p><h2 id="motion-title">Detección por movimiento</h2></div><span class="status" [class.active]="motion.estado().active">{{ motion.estado().active ? 'Activa' : 'Desactivada' }}</span></div>
+      <p class="intro">Activa una sesión de protección para detectar varias sacudidas fuertes, incluso mientras usas otra app o bloqueas el teléfono.</p>
+      <div class="steps"><div><strong>01</strong><h3>Actívala antes de salir</h3><p>La detección comienza solo cuando tú lo indicas.</p></div><div><strong>02</strong><h3>Tienes tiempo para cancelar</h3><p>Una vibración y una notificación avisan antes del envío. Puedes cancelar durante 10 segundos.</p></div><div><strong>03</strong><h3>Registro de SOS</h3><p>Durante la prealerta se intenta obtener tu ubicación. Al terminar, Android envía el SOS con las coordenadas disponibles, sin demorar la alerta si no logra ubicarlas.</p></div></div>
+      @if (!motion.disponible) { <p class="info" role="status">Esta función necesita la aplicación instalada en Android. Desde el navegador puedes revisar su configuración, pero no activar el sensor.</p> }
+      @if (auth.errorSesion()) { <p class="info" role="status">{{ auth.errorSesion() }}</p> }
+      @if (!auth.usuario() && !auth.verificando()) { <p class="login-note">Inicia sesión para asociar las alertas a tu cuenta. <a routerLink="/login">Iniciar sesión</a></p> }
+      @if (motion.estado().phase === 'countdown') {
+        <div class="countdown" role="alert"><strong>SOS en {{ segundos() }} segundos</strong><p>Se detectó un patrón de movimiento brusco.</p><button (click)="cancelar()" [disabled]="ocupado()">Cancelar este SOS</button></div>
+      }
+      @if (motion.estado().message) { <p class="native-message" role="status">{{ motion.estado().message }}</p> }
+      @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+      @if (motion.estado().active) {
+        <button class="stop" (click)="detener()" [disabled]="ocupado()">{{ ocupado() ? 'Procesando…' : 'Desactivar detección' }}</button>
+      } @else {
+        <label class="consent"><input type="checkbox" [checked]="consentimiento()" (change)="consentimiento.set($any($event.target).checked)" [disabled]="!motion.disponible"><span>Quiero activar una sesión de hasta 2 horas. Entiendo que usa el sensor con la pantalla bloqueada, consume batería y puede detectar movimientos cotidianos. Autorizo que intente obtener mi ubicación durante la prealerta y la incluya en el SOS confirmado.</span></label>
+        <button class="activate" (click)="activar()" [disabled]="ocupado() || !motion.disponible || !auth.usuario() || auth.verificando() || !consentimiento()">{{ ocupado() ? 'Activando…' : 'Activar detección por movimiento' }}</button>
+      }
+      <p class="footnote">Una notificación permite cancelar la prealerta o detener la detección. Al terminar las 2 horas debes activarla nuevamente. No se reactiva sola después de reiniciar o forzar el cierre.</p>
+    </section>
+    <div class="info-grid"><section class="panel detail"><ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon><h2>Tu decisión, tus datos</h2><p>Las lecturas se procesan en el teléfono. Solo se envía el evento confirmado al backend, junto con una ubicación reciente del dispositivo si está disponible. Se solicita permiso al activar la función: puedes permitir ubicación precisa o aproximada. Si lo rechazas o desactivas el GPS, el SOS se envía sin coordenadas. No se graba audio ni se rastrea tu recorrido.</p></section><section class="panel detail"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon><h2>Antes de confiar en ella</h2><p>La sensibilidad inicial necesita pruebas en teléfonos reales. El ahorro de batería, el fabricante o una pérdida de conexión pueden limitar la entrega. Registrar una alerta todavía no confirma que un contacto haya sido notificado.</p></section></div>
+    <footer class="page-footer"><span>SafeAlert · Seguridad personal</span><span>Configuración de protección</span></footer>
+  </main>
+</ion-content>

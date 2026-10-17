@@ -7,8 +7,11 @@ export interface AlertaRegistrada {
   id: number;
   alertaId?: number;
   mensaje?: string;
-  latitud?: number;
-  longitud?: number;
+  latitud?: number | null;
+  longitud?: number | null;
+  origen?: 'BOTON' | 'MOVIMIENTO' | 'VOLUMEN';
+  eventoId?: string | null;
+  duplicada?: boolean;
   usuarioId?: number | null;
   fecha?: string;
 }
@@ -32,6 +35,8 @@ export class ApiService {
     latitud?: number;
     longitud?: number;
     notificarPolicia?: boolean;
+    origen?: 'BOTON' | 'MOVIMIENTO' | 'VOLUMEN';
+    eventoId?: string;
   }): Observable<AlertaRegistrada> {
     return this.http.post<AlertaRegistrada>(`${this.apiUrl}/alerta`, datos ?? {}, {
       withCredentials: true,

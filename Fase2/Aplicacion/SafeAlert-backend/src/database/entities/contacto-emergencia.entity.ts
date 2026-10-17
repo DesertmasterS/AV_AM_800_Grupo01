@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Usuario } from './usuario.entity';
+import type { Relation } from 'typeorm';
 
 @Entity('contactos_emergencia')
 export class ContactoEmergencia {
@@ -17,7 +18,7 @@ export class ContactoEmergencia {
 
   @ManyToOne(() => Usuario, (usuario) => usuario.contactos, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'usuario_id' })
-  usuario: Usuario;
+  usuario: Relation<Usuario>;
 
   @CreateDateColumn({ name: 'creado_en' })
   creadoEn: Date;

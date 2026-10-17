@@ -5,11 +5,13 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Usuario } from './usuario.entity';
 import { Cuartel } from './cuartel.entity';
 
 @Entity('alertas')
+@Index('uq_alertas_usuario_evento', ['usuario', 'eventoId'], { unique: true, where: '"evento_id" IS NOT NULL' })
 export class Alerta {
   @PrimaryGeneratedColumn()
   id: number;
@@ -17,11 +19,14 @@ export class Alerta {
   @Column({ default: 'EMERGENCIA_SOS' })
   tipo: string;
 
-  @Column('numeric', { precision: 10, scale: 7, nullable: true })
-  latitud: number;
+  @Column({ name: 'evento_id', type: 'uuid', nullable: true })
+  eventoId: string | null;
 
   @Column('numeric', { precision: 10, scale: 7, nullable: true })
-  longitud: number;
+  latitud: number | null;
+
+  @Column('numeric', { precision: 10, scale: 7, nullable: true })
+  longitud: number | null;
 
   @Column({ default: 'PENDIENTE' })
   estado: string;

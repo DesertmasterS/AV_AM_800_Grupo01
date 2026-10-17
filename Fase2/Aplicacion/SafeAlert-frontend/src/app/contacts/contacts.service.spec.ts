@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -7,7 +8,7 @@ import { ContactsService } from './contacts.service';
 describe('ContactsService', () => {
   let service: ContactsService;
   let http: HttpTestingController;
-  const url = 'http://localhost:3000/contactos-emergencia';
+  const url = environment.apiUrl + '/contactos-emergencia';
   const datos = { nombre: 'Contacto', telefono: '+56900000001', relacion: 'Amigo' };
   beforeEach(() => {
     TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });

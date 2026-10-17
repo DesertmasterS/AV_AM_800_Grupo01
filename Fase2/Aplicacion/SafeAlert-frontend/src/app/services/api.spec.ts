@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
@@ -19,7 +20,7 @@ describe('ApiService', () => {
     let id: number | undefined;
     service.enviarAlerta().subscribe(alerta => { id = alerta.id; });
     const http = TestBed.inject(HttpTestingController);
-    const request = http.expectOne('http://localhost:3000/alerta');
+    const request = http.expectOne(environment.apiUrl + '/alerta');
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({});
     request.flush({ id: 7 });

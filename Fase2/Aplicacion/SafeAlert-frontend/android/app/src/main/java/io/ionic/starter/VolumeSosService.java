@@ -119,7 +119,7 @@ private void triggerSosRequest() {
                 conn.setDoOutput(true);
 
                 // Cuerpo JSON que cumple exactamente con CrearAlertaDto
-                String jsonInputString = "{\"notificarPolicia\": false}";
+                String jsonInputString = "{\"notificarPolicia\": false, \"origen\": \"VOLUMEN\"}";
 
                 try (OutputStream os = conn.getOutputStream()) {
                     byte[] input = jsonInputString.getBytes("utf-8");

@@ -1,8 +1,10 @@
+import { environment } from '../../environments/environment';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { beforeEach, afterEach, describe, expect, it } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthService } from './auth.service';
+import { MotionSosService } from '../settings/movimiento/motion-sos.service';
 
 describe('AuthService', () => {
   let auth: AuthService;
@@ -17,7 +19,7 @@ describe('AuthService', () => {
 
   it('solo establece la sesión tras una respuesta exitosa del servidor', () => {
     auth.iniciarSesion({ email: usuario.email, password: 'clave-de-prueba' }).subscribe();
-    const request = http.expectOne('http://localhost:3000/auth/login');
+    const request = http.expectOne(environment.apiUrl + '/auth/login');
     expect(request.request.withCredentials).toBe(true);
     expect(auth.usuario()).toBeNull();
     request.flush({ usuario });
@@ -25,16 +27,16 @@ describe('AuthService', () => {
   });
   it('recupera una sesión con me y la elimina al recibir un 401', () => {
     auth.actualizarSesion();
-    http.expectOne('http://localhost:3000/auth/me').flush({ usuario });
+    http.expectOne(environment.apiUrl + '/auth/me').flush({ usuario });
     expect(auth.usuario()).toEqual(usuario);
     auth.actualizarSesion();
-    http.expectOne('http://localhost:3000/auth/me').flush({}, { status: 401, statusText: 'Unauthorized' });
+    http.expectOne(environment.apiUrl + '/auth/me').flush({}, { status: 401, statusText: 'Unauthorized' });
     expect(auth.usuario()).toBeNull();
     expect(auth.verificando()).toBe(false);
   });
   it('distingue un fallo de servicio de una sesión expirada', () => {
     auth.actualizarSesion();
-    http.expectOne('http://localhost:3000/auth/me').flush({}, { status: 503, statusText: 'Unavailable' });
+    http.expectOne(environment.apiUrl + '/auth/me').flush({}, { status: 503, statusText: 'Unavailable' });
     expect(auth.errorSesion()).toContain('No se pudo verificar');
     expect(auth.verificando()).toBe(false);
   });
@@ -42,14 +44,28 @@ describe('AuthService', () => {
     const datos = { ...usuario, password: 'clave-de-prueba' };
     const { id: _id, ...registro } = datos;
     auth.registrar(registro).subscribe();
-    const request = http.expectOne('http://localhost:3000/auth/register');
+    const request = http.expectOne(environment.apiUrl + '/auth/register');
     expect(request.request.body).toEqual(registro);
     expect(request.request.withCredentials).toBe(true);
     request.flush({ usuario });
     auth.cerrarSesion().subscribe();
-    const logout = http.expectOne('http://localhost:3000/auth/logout');
+    const logout = http.expectOne(environment.apiUrl + '/auth/logout');
     expect(logout.request.method).toBe('POST');
     logout.flush(null);
     expect(auth.usuario()).toBeNull();
+  });
+  it('espera la sincronización nativa y descarta el token al expirar la sesión', async () => {
+    auth.iniciarSesion({ email: usuario.email, password: 'clave-de-prueba' }).subscribe();
+    http.expectOne(environment.apiUrl + '/auth/login').flush({ usuario, token: 'token-de-prueba' });
+    await expect(auth.prepararSesionMovimiento()).resolves.toEqual({ token: 'token-de-prueba', usuarioId: 1 });
+    auth.actualizarSesion();
+    http.expectOne(environment.apiUrl + '/auth/me').flush({}, { status: 401, statusText: 'Unauthorized' });
+    await expect(auth.prepararSesionMovimiento()).rejects.toThrow('Inicia sesión');
+  });
+  it('detiene el monitoreo al solicitar cerrar sesión, incluso si el servidor falla', () => {
+    const stop = vi.spyOn(TestBed.inject(MotionSosService), 'detener').mockResolvedValue(undefined);
+    auth.cerrarSesion().subscribe({ error: () => undefined });
+    expect(stop).toHaveBeenCalledOnce();
+    http.expectOne(environment.apiUrl + '/auth/logout').flush({}, { status: 503, statusText: 'Unavailable' });
   });
 });

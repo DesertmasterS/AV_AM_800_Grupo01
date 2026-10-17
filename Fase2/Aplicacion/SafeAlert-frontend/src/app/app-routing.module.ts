@@ -23,12 +23,7 @@ const routes: Routes = [
     ] },
   },
   {
-    path: 'settings', loadComponent: () => import('./views/section.page').then(m => m.SectionPage),
-    data: { title: 'Ajustes de seguridad', eyebrow: 'TU SEGURIDAD, A TU MANERA', description: 'configurar los permisos y la activación de alertas.', icon: 'settings-outline', areas: [
-      { title: 'Ubicación y micrófono', icon: 'location-outline' },
-      { title: 'Activación y cancelación', icon: 'radio-outline' },
-      { title: 'Privacidad y datos', icon: 'lock-closed-outline' },
-    ] },
+    path: 'settings', loadComponent: () => import('./settings/settings.page').then(m => m.SettingsPage),
   },
   {
     path: 'profile', loadComponent: () => import('./auth/profile.page').then(m => m.ProfilePage),

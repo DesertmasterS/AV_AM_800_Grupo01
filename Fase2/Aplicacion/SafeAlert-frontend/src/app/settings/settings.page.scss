@@ -1,0 +1,24 @@
+.motion-card { padding: 30px; }
+.motion-heading { display: flex; gap: 16px; align-items: center; }
+.motion-heading h2 { font-size: 24px; margin: 0; letter-spacing: -.7px; }
+.motion-heading .eyebrow { margin-bottom: 7px; }
+.motion-icon { width: 52px; height: 52px; border-radius: 16px; background: #eaf3ed; color: #3d7966; display: grid; place-items: center; font-size: 27px; flex-shrink: 0; }
+.status { margin-left: auto; font-size: 11px; padding: 8px 13px; border-radius: 20px; background: #eef1f0; color: #667a80; }
+.status.active { background: #e1f1e5; color: #24634d; }
+.intro { max-width: 740px; font-size: 14px; color: #647c83; line-height: 1.8; margin: 24px 0; }
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 24px 0; border-top: 1px solid #e0e8e3; border-bottom: 1px solid #e0e8e3; }
+.steps strong { font-size: 12px; color: #548574; } .steps h3 { margin: 11px 0; font-size: 14px; } .steps p, .detail p { font-size: 12px; line-height: 1.8; color: #667f85; margin: 0; }
+.info, .error, .native-message { border-radius: 10px; padding: 14px 17px; font-size: 12px; line-height: 1.8; margin-top: 22px; }
+.info { background: #f4f2e9; color: #78683c; } .error { background: #fff1ef; color: #a33a49; } .native-message { background: #edf5ef; color: #3a715b; }
+.login-note { font-size: 12px; color: #607a81; line-height: 1.7; } .login-note a { color: #276b5c; margin-left: 5px; }
+.consent { display: flex; gap: 13px; align-items: flex-start; margin: 25px 0 20px; font-size: 12px; line-height: 1.8; color: #536f78; }
+.consent input { accent-color: #246d60; width: 19px; height: 19px; flex-shrink: 0; margin-top: 2px; }
+.activate, .stop, .countdown button { padding: 15px 20px; border-radius: 10px; border: 0; background: #246d60; color: #fff; font-weight: 650; font-size: 13px; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.stop { margin-top: 20px; background: #a83d4e; }
+.footnote { font-size: 11px; line-height: 1.8; color: #72868c; max-width: 720px; margin: 20px 0 0; }
+.countdown { padding: 22px; border: 1px solid #efc9c9; background: #fff2ee; border-radius: 13px; margin-top: 22px; color: #a03d4a; }
+.countdown strong { font-size: 21px; } .countdown p { font-size: 13px; } .countdown button { background: #b33e51; }
+.info-grid { margin-top: 23px; display: grid; grid-template-columns: 1fr 1fr; gap: 23px; }
+.detail { padding: 26px; } .detail ion-icon { font-size: 24px; color: #548574; } .detail h2 { font-size: 16px; margin: 15px 0 12px; }
+@media (max-width: 760px) { .motion-card { padding: 23px; } .motion-heading { flex-wrap: wrap; gap: 13px; } .motion-heading h2 { font-size: 20px; } .status { margin-left: 0; } .steps, .info-grid { grid-template-columns: 1fr; } .activate, .stop { width: 100%; } }

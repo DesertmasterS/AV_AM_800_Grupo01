@@ -1,0 +1,4 @@
+<full-backup-content>
+    <exclude domain="sharedpref" path="CapacitorStorage.xml" />
+    <exclude domain="sharedpref" path="SafeAlertMotion.xml" />
+</full-backup-content>
