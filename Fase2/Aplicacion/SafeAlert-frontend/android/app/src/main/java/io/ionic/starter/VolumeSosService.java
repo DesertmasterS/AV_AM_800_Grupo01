@@ -63,14 +63,36 @@ public class VolumeSosService extends AccessibilityService {
         return false;
     }
 
-    private void vibrateConfirmation() {
-        Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-        if (v != null) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                v.vibrate(VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE));
+private void vibrateConfirmation() {
+        try {
+            Vibrator v;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                android.os.VibratorManager vm = (android.os.VibratorManager) getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+                v = vm.getDefaultVibrator();
             } else {
-                v.vibrate(400);
+                v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
             }
+
+            if (v != null && v.hasVibrator()) {
+                // Dos vibraciones fuertes de 300ms para que se sienta claramente en el bolsillo
+                long[] pattern = {0, 300, 150, 300};
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    android.os.VibrationAttributes attrs = new android.os.VibrationAttributes.Builder()
+                            .setUsage(android.os.VibrationAttributes.USAGE_ALARM)
+                            .build();
+                    v.vibrate(VibrationEffect.createWaveform(pattern, -1), attrs);
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    android.media.AudioAttributes audioAttrs = new android.media.AudioAttributes.Builder()
+                            .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                            .build();
+                    v.vibrate(VibrationEffect.createWaveform(pattern, -1), audioAttrs);
+                } else {
+                    v.vibrate(pattern, -1);
+                }
+                Log.d(TAG, "Vibración ejecutada correctamente");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error al vibrar", e);
         }
     }
 
