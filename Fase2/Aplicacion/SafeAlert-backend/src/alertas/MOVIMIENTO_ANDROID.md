@@ -1,6 +1,6 @@
 # Detección de movimiento para SafeAlert Android
 
-La opción de Ajustes activa una sesión nativa de protección por hasta dos horas. El acelerómetro y el envío funcionan fuera de la WebView. El APK de depuración ya compila y las pruebas unitarias nativas pasan. Antes de probar el flujo completo con un teléfono hay que aplicar la migración y desplegar el backend; no ha sido validado físicamente.
+La opción de Ajustes activa una sesión nativa de protección por hasta dos horas. El acelerómetro y el envío funcionan fuera de la WebView. El APK de depuración ya compila y las pruebas unitarias nativas pasan. La migración se aplicó en la base configurada el 18 de octubre de 2026. En otros entornos debe aplicarse antes de desplegar el backend. El flujo completo de movimiento con pantalla bloqueada aún requiere validación física.
 
 ## Organización
 
@@ -72,7 +72,7 @@ Solo el evento cuya cuenta regresiva terminó se conserva en preferencias privad
 
 ## Preparación antes de desplegar
 
-1. Aplicar database/migrations/20261017_movimiento_alertas.sql en la base correspondiente. synchronize continúa desactivado. La migración no se ha ejecutado sobre la base real.
+1. Aplicar database/migrations/20261017_movimiento_alertas.sql en la base correspondiente. synchronize continúa desactivado. El 18 de octubre de 2026 se aplicó en la base configurada para el proyecto: se verificaron evento_id y el índice único, sin modificar alertas existentes. Un EXPLAIN validó la estructura de inserción sin ejecutar el INSERT. La consulta autenticada GET /alerta/historial a Cloud Run devolvió HTTP 200 tras la migración; no se creó ninguna alerta de prueba.
 2. Desplegar el backend con el DTO y servicio nuevos. Si se despliega el código sin la columna evento_id, las operaciones de alertas fallarán al consultar o guardar.
 3. Verificar JWT_SECRET, HTTPS y la URL de environment.apiUrl. El móvil necesita una dirección alcanzable; localhost del equipo no sirve como backend del teléfono.
 4. Ejecutar npm run build y npx cap sync android en SafeAlert-frontend.

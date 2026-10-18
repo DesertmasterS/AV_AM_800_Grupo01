@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { ToastController } from '@ionic/angular';
 import { Subject, of, throwError } from 'rxjs';
@@ -57,5 +58,21 @@ describe('HomePage', () => {
     expect(component.enviando).toBe(false);
     expect(component.errorAlerta).toBe(true);
     expect(component.resultado).toContain('No se pudo confirmar');
+  });
+
+  it('distingue un error interno del servidor de una pérdida de conexión', () => {
+    api.enviarAlerta.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    component.activarAlerta();
+    expect(component.errorAlerta).toBe(true);
+    expect(component.resultado).toContain('El servidor tuvo un problema');
+    expect(component.resultado).not.toContain('Revisa tu conexión');
+    expect(component.conexion).toBe('online');
+  });
+
+  it('indica que hay que iniciar sesión cuando el servidor devuelve 401', () => {
+    api.enviarAlerta.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 401 })));
+    component.activarAlerta();
+    expect(component.errorAlerta).toBe(true);
+    expect(component.resultado).toContain('Inicia sesión nuevamente');
   });
 });
