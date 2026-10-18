@@ -1,5 +1,7 @@
 package io.ionic.starter.movimiento;
 
+import io.ionic.starter.sos.SosLocationCapture;
+
 import android.Manifest;
 import android.app.NotificationManager;
 import android.content.Intent;
@@ -43,7 +45,7 @@ public class MotionSosPlugin extends Plugin {
     }
 
     private void requestLocation(PluginCall call) {
-        if (!MotionLocationCapture.hasPermission(getContext()) && getPermissionState("location") != PermissionState.DENIED) {
+        if (!SosLocationCapture.hasPermission(getContext()) && getPermissionState("location") != PermissionState.DENIED) {
             requestPermissionForAlias("location", call, "locationResult");
             return;
         }
@@ -103,7 +105,7 @@ public class MotionSosPlugin extends Plugin {
                 return;
             }
             Intent intent = new Intent(getContext(), MotionSosService.class);
-            intent.putExtra("locationEnabled", MotionLocationCapture.hasPermission(getContext()));
+            intent.putExtra("locationEnabled", SosLocationCapture.hasPermission(getContext()));
             intent.putExtra("token", token);
             intent.putExtra("endpoint", endpoint);
             intent.putExtra("owner", owner);

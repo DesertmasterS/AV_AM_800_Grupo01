@@ -2,9 +2,11 @@
     <cloud-backup>
         <exclude domain="sharedpref" path="CapacitorStorage.xml" />
         <exclude domain="sharedpref" path="SafeAlertMotion.xml" />
+        <exclude domain="sharedpref" path="SafeAlertVolume.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="CapacitorStorage.xml" />
         <exclude domain="sharedpref" path="SafeAlertMotion.xml" />
+        <exclude domain="sharedpref" path="SafeAlertVolume.xml" />
     </device-transfer>
 </data-extraction-rules>

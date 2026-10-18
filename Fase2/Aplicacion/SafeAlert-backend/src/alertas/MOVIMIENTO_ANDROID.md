@@ -7,7 +7,7 @@ La opción de Ajustes activa una sesión nativa de protección por hasta dos hor
 - Backend: alertas/dto/crear-alerta.dto.ts define origen y eventoId; alertas.service.ts registra y deduplica los eventos.
 - Base de datos: database/migrations/20261017_movimiento_alertas.sql añade el identificador opcional y su índice único por usuario.
 - Frontend: settings/settings.page muestra el consentimiento, estado y controles. settings/movimiento/motion-sos.service.ts comunica con Capacitor.
-- Android: io/ionic/starter/movimiento contiene el detector, servicio, plugin, captura de ubicación, política de validez y transporte HTTP. MainActivity registra el plugin.
+- Android: io/ionic/starter/movimiento contiene la detección de movimiento; volumen contiene la protección por botones; sos contiene la captura de ubicación, política de validez, sesión y transporte HTTP compartidos. MainActivity registra ambos plugins. VolumeSosService conserva el componente de accesibilidad existente y delega en volumen/VolumeAccessibilityService.
 - Auth conserva la integración existente de JWT con Preferences y detiene el monitoreo al salir o invalidarse la sesión. La implementación no incorpora iOS.
 
 ## Flujo en Android
@@ -28,7 +28,7 @@ La sesión termina a las dos horas o al vencer el JWT, lo que ocurra primero. Pu
 
 El acelerómetro normal no requiere permiso de ubicación, micrófono, accesibilidad ni actividad física. La función solicita ubicación y notificaciones al usuario y exige un canal habilitado para que la cancelación resulte accesible. Esta es una decisión de SafeAlert: Android permite iniciar un foreground service sin conceder POST_NOTIFICATIONS, pero la app no lo hace.
 
-La ubicación se pide conjuntamente con ACCESS_COARSE_LOCATION y ACCESS_FINE_LOCATION para respetar la elección aproximada de Android. Si se rechaza, el monitoreo sigue disponible y sus SOS salen sin coordenadas. Un permiso rechazado permanentemente debe cambiarse desde Ajustes de Android; después hay que desactivar y reactivar la detección. No se pide ACCESS_BACKGROUND_LOCATION en este flujo: el servicio de ubicación debe iniciarse desde una actividad visible, antes de bloquear la pantalla. El permiso de segundo plano ya presente en el manifiesto pertenece a la configuración previa.
+La ubicación se pide conjuntamente con ACCESS_COARSE_LOCATION y ACCESS_FINE_LOCATION para respetar la elección aproximada de Android. Si se rechaza, el monitoreo sigue disponible y sus SOS salen sin coordenadas. Un permiso rechazado permanentemente debe cambiarse desde Ajustes de Android; después hay que desactivar y reactivar la detección. Ni movimiento ni volumen solicitan ACCESS_BACKGROUND_LOCATION: el servicio de ubicación debe iniciarse desde una actividad visible, antes de bloquear la pantalla. El permiso de segundo plano ya presente en el manifiesto pertenece a la configuración previa.
 
 Si Android impide iniciar el tipo location (por ejemplo, una revocación o ubicación deshabilitada), se intenta conservar el monitoreo specialUse sin ubicación y se muestra el aviso. Para habilitar ubicación en esa sesión se deben revisar GPS/permisos y volver a activar la detección. Si tampoco puede iniciarse specialUse, se informa que el monitoreo no pudo comenzar.
 
@@ -40,9 +40,9 @@ Una petición que ya llegó al servidor puede haberse registrado aunque se desac
 
 ## Captura de ubicación
 
-MotionLocationCapture utiliza LocationManager (GPS y red), sin añadir dependencias de Google Play Services. Solo solicita actualizaciones durante la prealerta: no rastrea durante las dos horas de monitoreo. Se detiene al enviar, cancelar, desactivar o destruir el servicio. Una caché reciente también puede servir; se comprueba su edad con el reloj monotónico del dispositivo.
+SosLocationCapture utiliza LocationManager (GPS y red), sin añadir dependencias de Google Play Services. Solo solicita actualizaciones durante la prealerta: no rastrea durante las dos horas de monitoreo. Se detiene al enviar, cancelar, desactivar o destruir el servicio. Una caché reciente también puede servir; se comprueba su edad con el reloj monotónico del dispositivo.
 
-MotionLocationPolicy exige coordenadas finitas y dentro de sus rangos, edad entre 0 y 30 segundos y precisión declarada mayor que 0 y hasta 5000 metros, permitiendo ubicación aproximada. Entre posiciones válidas se elige la de menor radio de error. El backend actual conserva latitud/longitud; no guarda aún el radio de precisión ni la hora de captura como campos separados, por lo que estas coordenadas no deben presentarse como una posición exacta garantizada.
+SosLocationPolicy exige coordenadas finitas y dentro de sus rangos, edad entre 0 y 30 segundos y precisión declarada mayor que 0 y hasta 5000 metros, permitiendo ubicación aproximada. Entre posiciones válidas se elige la de menor radio de error. El backend actual conserva latitud/longitud; no guarda aún el radio de precisión ni la hora de captura como campos separados, por lo que estas coordenadas no deben presentarse como una posición exacta garantizada.
 
 No se añade una espera después de los 10 segundos. GPS apagado, proveedor ausente, permiso denegado/revocado o una ubicación demasiado antigua producen un SOS sin coordenadas; nunca una ubicación de ejemplo. Antes de confirmar el evento se comprueba nuevamente el permiso. Los reintentos usan la posición original del evento, no consultan otra nueva.
 
@@ -69,6 +69,22 @@ La misma cuenta puede reutilizar el UUID para reintentar su evento, pero otra cu
 El servicio Android reintenta fallos de red, 408, 429 y 5xx con el mismo UUID, hasta 8 intentos y durante una ventana de 5 minutos. Un 401 o 403 detiene la detección. Otros errores 4xx dejan un aviso de integración sin afirmar que el SOS fue registrado.
 
 Solo el evento cuya cuenta regresiva terminó se conserva en preferencias privadas. Si el proceso se pierde, podrá recuperarse al reactivar manualmente con el mismo usuario y backend dentro de esa ventana. Al desactivar o cambiar de cuenta se descarta. Las coordenadas de ese evento se conservan junto a su UUID para que los reintentos mantengan el mismo contenido, incluso tras una recuperación manual. Se borran al confirmar, descartar, desactivar o cambiar de cuenta. No se guardan lecturas crudas del sensor ni recorridos.
+
+## Alertas por botones de volumen
+
+La opción «S.O.S. con botones de volumen» de Ajustes muestra los permisos reales y el estado de accesibilidad. El usuario solicita ubicación y notificaciones desde la app y habilita manualmente SafeAlert en los ajustes de Accesibilidad de Android. La app no activa accesibilidad por su cuenta ni cambia ajustes de seguridad. El servicio no solicita contenido de las ventanas; procesa eventos de botones y su callback de accesibilidad no lee datos de pantalla.
+
+Tres pulsaciones del mismo botón (arriba o abajo) en 2 segundos activan el SOS. Se ignoran las autorrepeticiones de un botón mantenido, se deduplica el mismo KeyEvent recibido por la actividad y accesibilidad, y existe un enfriamiento de 30 segundos. No hay cuenta regresiva cancelable como en movimiento. Mientras se obtiene ubicación o se envía una alerta, se bloquean nuevas activaciones.
+
+Con la app abierta, MainActivity usa la ruta nativa para iniciar un envío puntual. Para usar los botones desde otra app o con pantalla bloqueada, el usuario activa explícitamente una sesión de hasta dos horas, limitada además por el vencimiento del JWT. VolumeProtectionService inicia specialUse|location desde la actividad visible, con notificación y acción para desactivar. Si Android no permite location, conserva specialUse y advierte que esa sesión no incluirá ubicación. Para incluirla, se revisan los permisos y se vuelve a activar. No se solicita ACCESS_BACKGROUND_LOCATION ni ignorar optimizaciones de batería.
+
+En cada SOS se intentan capturar coordenadas durante un máximo de 5 segundos, con la misma política de validez que movimiento (hasta 30 segundos de antigüedad y precisión declarada de hasta 5000 metros, admitiendo aproximada). No se realizan solicitudes de ubicación durante el resto de la sesión. Un bloqueo parcial de CPU acotado mantiene el envío mientras la pantalla está apagada. GPS apagado, permiso rechazado o revocado, o falta de posición válida producen un envío sin ambas coordenadas.
+
+SosAlertClient envía origen VOLUMEN, un eventoId UUID v4 y notificarPolicia false, más latitud y longitud cuando existen. No incorpora reintentos automáticos para volumen; solo se considera confirmado un 2xx con id positivo. Un fallo no confirma registro ni notificación a contactos. El backend ya admite VOLUMEN y deduplica el UUID con la misma migración de movimiento. El listener JavaScript no se instala en Android para evitar una segunda solicitud; en navegador conserva una ruta de prueba que también intenta obtener ubicación.
+
+Desactivar la sesión, cerrar/cambiar sesión, perder la conexión del servicio de accesibilidad, forzar el cierre o reiniciar detiene la protección en segundo plano. Una petición ya recibida por el servidor puede haberse registrado aunque después se detenga el servicio. Los permisos de Android no equivalen a una sesión activa y el estado se vuelve a consultar al regresar a Ajustes. Las preferencias SafeAlertVolume solo conservan el último mensaje de estado y se excluyen de respaldo/transferencia.
+
+Validación del 18 de octubre de 2026: 42 pruebas del frontend y 17 pruebas unitarias nativas aprobadas, más compilación del frontend y Android. Pruebas añadidas: detector de volumen (ventana, ambos botones, cambios de botón, autorrepetición, doble entrega y enfriamiento), transporte contra MockWebServer local (coordenadas, origen, UUID, ausencia de GPS, fallos y cancelación) y frontend (permisos, estado nativo, consentimiento y exclusión de la ruta JavaScript en Android). No se generaron alertas reales como parte de estas pruebas. La recepción de botones con pantalla bloqueada necesita validación en el teléfono con accesibilidad habilitada por el usuario; puede variar según Android y fabricante.
 
 ## Preparación antes de desplegar
 

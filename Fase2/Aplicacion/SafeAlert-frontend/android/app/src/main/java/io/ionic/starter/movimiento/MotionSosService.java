@@ -1,5 +1,9 @@
 package io.ionic.starter.movimiento;
 
+import io.ionic.starter.sos.SosLocationPolicy;
+import io.ionic.starter.sos.SosLocationCapture;
+import io.ionic.starter.sos.SosAlertClient;
+
 import android.app.*;
 import android.content.*;
 import android.content.pm.ServiceInfo;
@@ -28,11 +32,11 @@ public class MotionSosService extends Service implements SensorEventListener {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService network = Executors.newSingleThreadExecutor();
     private final MotionDetector detector = new MotionDetector();
-    private final MotionAlertClient client = new MotionAlertClient();
+    private final SosAlertClient client = new SosAlertClient("MOVIMIENTO");
     private final float[] gravity = new float[3];
     private boolean gravityReady;
     private boolean locationEnabled;
-    private MotionLocationCapture locationCapture;
+    private SosLocationCapture locationCapture;
     private Double eventLatitude, eventLongitude;
     private volatile boolean stopping;
     private String token, endpoint, owner;
@@ -54,7 +58,7 @@ public class MotionSosService extends Service implements SensorEventListener {
         super.onCreate();
         storage = getSharedPreferences(PREFS, MODE_PRIVATE);
         auth = getSharedPreferences("CapacitorStorage", MODE_PRIVATE);
-        locationCapture = new MotionLocationCapture(this);
+        locationCapture = new SosLocationCapture(this);
         sensors = (SensorManager) getSystemService(SENSOR_SERVICE);
         if (Build.VERSION.SDK_INT >= 26) {
             NotificationChannel channel = new NotificationChannel(CHANNEL, "Detección por movimiento", NotificationManager.IMPORTANCE_DEFAULT);
@@ -88,7 +92,7 @@ public class MotionSosService extends Service implements SensorEventListener {
         if (token == null || endpoint == null || owner == null || sessionEndsAt <= System.currentTimeMillis()) {
             stopSelf(); return START_NOT_STICKY;
         }
-        locationEnabled = intent.getBooleanExtra("locationEnabled", false) && MotionLocationCapture.hasPermission(this);
+        locationEnabled = intent.getBooleanExtra("locationEnabled", false) && SosLocationCapture.hasPermission(this);
         phase = "monitoring";
         try {
             Notification notification = notification();
@@ -141,7 +145,7 @@ public class MotionSosService extends Service implements SensorEventListener {
             x -= gravity[0]; y -= gravity[1]; z -= gravity[2];
         }
         if (detector.sample(x, y, z, SystemClock.elapsedRealtime())) {
-            if (locationEnabled && MotionLocationCapture.hasPermission(this)) locationCapture.start();
+            if (locationEnabled && SosLocationCapture.hasPermission(this)) locationCapture.start();
             phase = "countdown";
             deadline = System.currentTimeMillis() + 10000;
             countdownEndElapsed = SystemClock.elapsedRealtime() + 10000;
@@ -165,7 +169,7 @@ public class MotionSosService extends Service implements SensorEventListener {
             }
             deadline = 0;
             Location location = locationCapture.finish();
-            if (!MotionLocationCapture.hasPermission(MotionSosService.this)) location = null;
+            if (!SosLocationCapture.hasPermission(MotionSosService.this)) location = null;
             eventLatitude = location != null ? location.getLatitude() : null;
             eventLongitude = location != null ? location.getLongitude() : null;
             eventId = UUID.randomUUID().toString();
@@ -192,7 +196,7 @@ public class MotionSosService extends Service implements SensorEventListener {
             try {
                 double latitude = Double.parseDouble(storage.getString("eventLatitude", ""));
                 double longitude = Double.parseDouble(storage.getString("eventLongitude", ""));
-                if (MotionLocationPolicy.accepts(latitude, longitude, 1, 0)) {
+                if (SosLocationPolicy.accepts(latitude, longitude, 1, 0)) {
                     eventLatitude = latitude; eventLongitude = longitude;
                 }
             } catch (NumberFormatException ignored) { eventLatitude = null; eventLongitude = null; }
@@ -215,7 +219,7 @@ public class MotionSosService extends Service implements SensorEventListener {
         Double sendingLatitude = eventLatitude, sendingLongitude = eventLongitude;
         network.execute(() -> {
             if (stopping || !sendingId.equals(eventId)) return;
-            MotionAlertClient.Result result = client.send(endpoint, token, sendingId, sendingLatitude, sendingLongitude);
+            SosAlertClient.Result result = client.send(endpoint, token, sendingId, sendingLatitude, sendingLongitude);
             handler.post(() -> {
                 if (stopping || !sendingId.equals(eventId)) return;
                 if (result.confirmed()) {
