@@ -6,7 +6,8 @@ La aplicación utiliza lenguaje de  TypeScript, HTML y CSS. Los frameworks usado
 ## Instrucciones para ejecución local
 Para la ejecución local de la aplicación se requiere de la instalación de Node v24.21.0, luego ejecutar npm install -g @nestjs/cli para la instalación de NestJS y finalmente, abrir una terminal en SafeAlert-backend y ejecutar npm install, finalmente para iniciar el backend ejecutar npm run start:dev. Para ejecutar el frontend se debe instalar Ionic mediante la ejecución de npm i -g @ionic/cli en la terminal, luego en la carpeta SafeAlert-frontend ejecutar npm install y finalmente se inicia el servidor con ionic serve. En caso de utilizar Docker, se encuentra un README en la carpeta raiz de la aplicación con los detalles de su uso.
 ## Integrantes
-Ronald Bruno (Scrum Master - Desarrollador Frontend) - Tomás Pérez (Scrum Developer) - Bastián Trostel (Scrum Developer - Desarrollador Backend) - Cristofer Zapata (Scrum Developer) 
+Ronald Bruno (Scrum Master - Desarrollador Frontend) - Tomás Pérez (Scrum Developer) - Bastián Trostel (Product Owner - Desarrollador Backend) - Cristofer Zapata (Scrum Developer) 
 ## Metodología de trabajo
-El desarrollo de este proyecto es realizado mediante el uso de la metodología Scrum, la información de cada sprint será almacenado en Google Drive y las actividades para realizar se mantendrá un registro con el uso de Trello.
+El desarrollo de este proyecto es realizado mediante el uso de la metodología Scrum, la información de cada sprint será almacenado en Google Drive y las actividades para realizar se mantendrá un registro con el uso de Trello. Se realizan historias de usuario junto a un Backlog Priorizado para identificar las historias de usuarios clave para la realización del proyecto, se analiza junto al Product Owner y Scrum Master el avance semanal del proyecto, identificando el progreso realizado y las tareas por realizar.
 ## Arquitectura de la Solución
+<img width="3278" height="1922" alt="Arquitectura-lucid" src="https://github.com/user-attachments/assets/c8c29e43-b3ab-4e8e-9c05-8b3dc9a75363" />
