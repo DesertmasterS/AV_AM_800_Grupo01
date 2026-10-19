@@ -5,6 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthService } from './auth.service';
 import { MotionSosService } from '../settings/movimiento/motion-sos.service';
+import { VolumeSosService } from '../settings/volumen/volume-sos.service';
 
 describe('AuthService', () => {
   let auth: AuthService;
@@ -64,8 +65,10 @@ describe('AuthService', () => {
   });
   it('detiene el monitoreo al solicitar cerrar sesión, incluso si el servidor falla', () => {
     const stop = vi.spyOn(TestBed.inject(MotionSosService), 'detener').mockResolvedValue(undefined);
+    const stopVolume = vi.spyOn(TestBed.inject(VolumeSosService), 'detener').mockResolvedValue(undefined);
     auth.cerrarSesion().subscribe({ error: () => undefined });
     expect(stop).toHaveBeenCalledOnce();
+    expect(stopVolume).toHaveBeenCalledOnce();
     http.expectOne(environment.apiUrl + '/auth/logout').flush({}, { status: 503, statusText: 'Unavailable' });
   });
 });

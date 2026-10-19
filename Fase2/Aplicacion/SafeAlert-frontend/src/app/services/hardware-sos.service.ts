@@ -1,6 +1,8 @@
-import { Injectable, inject } from '@angular/core';
+import { DestroyRef, Injectable, inject } from '@angular/core';
 import { ToastController } from '@ionic/angular';
 import { ApiService } from './api';
+import { finalize, timeout } from 'rxjs';
+import { VOLUME_IS_ANDROID } from '../settings/volumen/volume-sos.service';
 
 @Injectable({
   providedIn: 'root',
@@ -8,20 +10,30 @@ import { ApiService } from './api';
 export class HardwareSosService {
   private readonly apiService = inject(ApiService);
   private readonly toastController = inject(ToastController);
+  private readonly android = inject(VOLUME_IS_ANDROID);
+  private inicializado = false;
+  private readonly listener = (event: KeyboardEvent) => {
+    if (!event.repeat && (event.key === 'VolumeDown' || event.code === 'VolumeDown')) this.procesarPulsacion();
+  };
 
   private contadorPulsaciones = 0;
-  private temporizador: any = null;
+  private temporizador: ReturnType<typeof setTimeout> | null = null;
   private readonly VENTANA_MS = 2000;
   private readonly PULSACIONES_OBJETIVO = 3;
   private enviando = false;
 
-  inicializarListener(): void {
-    // Simular en web o inyección de eventos en android
-    window.addEventListener('keydown', (event: KeyboardEvent) => {
-      if (event.key === 'VolumeDown' || event.code === 'VolumeDown') {
-        this.procesarPulsacion();
-      }
+  constructor() {
+    inject(DestroyRef).onDestroy(() => {
+      window.removeEventListener('keydown', this.listener);
+      this.reiniciarContador();
     });
+  }
+
+  inicializarListener(): void {
+    // Android utiliza una sola ruta nativa para actividad y accesibilidad.
+    if (this.android || this.inicializado) return;
+    this.inicializado = true;
+    window.addEventListener('keydown', this.listener);
   }
 
   private procesarPulsacion(): void {
@@ -39,7 +51,7 @@ export class HardwareSosService {
     // Tercer toque dentro de la ventana: dispara la alerta
     if (this.contadorPulsaciones >= this.PULSACIONES_OBJETIVO) {
       this.reiniciarContador();
-      this.ejecutarAlertaSos();
+      void this.ejecutarAlertaSos();
     }
   }
 
@@ -51,19 +63,18 @@ export class HardwareSosService {
     this.contadorPulsaciones = 0;
   }
 
-  private ejecutarAlertaSos(): void {
+  private async ejecutarAlertaSos(): Promise<void> {
     this.enviando = true;
-
-    this.apiService.enviarAlerta({ notificarPolicia: true, origen: 'VOLUMEN' }).subscribe({
+    const coords = await this.obtenerUbicacion();
+    this.apiService.enviarAlerta({ ...coords, notificarPolicia: false, origen: 'VOLUMEN', eventoId: crypto.randomUUID() })
+      .pipe(timeout(15000), finalize(() => { this.enviando = false; })).subscribe({
       next: async (res) => {
-        this.enviando = false;
         await this.mostrarAviso(
-          `¡S.O.S DISPARADO! Alerta #${res.id ?? res.alertaId} enviada`,
+          `Alerta #${res.id ?? res.alertaId} registrada${coords ? ' con ubicación del dispositivo.' : ' sin ubicación disponible.'}`,
           'danger'
         );
       },
       error: async (err) => {
-        this.enviando = false;
         console.error('Error enviando alerta SOS por hardware:', {
           status: err?.status,
           message: err?.message,
@@ -74,6 +85,18 @@ export class HardwareSosService {
           'warning'
         );
       },
+    });
+  }
+
+  private obtenerUbicacion(): Promise<{ latitud: number; longitud: number } | undefined> {
+    return new Promise(resolve => {
+      if (!navigator.geolocation) { resolve(undefined); return; }
+      try {
+        navigator.geolocation.getCurrentPosition(
+          position => resolve({ latitud: position.coords.latitude, longitud: position.coords.longitude }),
+          () => resolve(undefined), { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 },
+        );
+      } catch { resolve(undefined); }
     });
   }
 

@@ -16,6 +16,11 @@
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="User-activated personal safety session: detect repeated strong device motion and send a cancellable emergency alert." />
         </service>
+        <service android:name=".volumen.VolumeProtectionService"
+            android:exported="false" android:foregroundServiceType="specialUse|location">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-activated volume-button safety session with a visible notification and location captured only on SOS." />
+        </service>
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"

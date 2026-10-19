@@ -1,4 +1,4 @@
-package io.ionic.starter.movimiento;
+package io.ionic.starter.sos;
 
 import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
@@ -8,24 +8,29 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 /** Transporte independiente de la WebView. No sigue redirecciones ni registra credenciales. */
-final class MotionAlertClient {
+public final class SosAlertClient {
+    private final String origin;
+    public SosAlertClient(String origin) {
+        if (!"MOVIMIENTO".equals(origin) && !"VOLUMEN".equals(origin)) throw new IllegalArgumentException("Origen inválido");
+        this.origin = origin;
+    }
     private volatile boolean cancelled;
     private volatile HttpURLConnection active;
 
-    void cancel() {
+    public void cancel() {
         cancelled = true;
         HttpURLConnection connection = active;
         if (connection != null) connection.disconnect();
     }
-    static final class Result {
-        final int status;
-        final long alertId;
+    public static final class Result {
+        public final int status;
+        public final long alertId;
         Result(int status, long alertId) { this.status = status; this.alertId = alertId; }
-        boolean confirmed() { return status >= 200 && status < 300 && alertId > 0; }
-        boolean retryable() { return status == 0 || status == 408 || status == 429 || status >= 500 || (status >= 200 && status < 300 && alertId <= 0); }
+        public boolean confirmed() { return status >= 200 && status < 300 && alertId > 0; }
+        public boolean retryable() { return status == 0 || status == 408 || status == 429 || status >= 500 || (status >= 200 && status < 300 && alertId <= 0); }
     }
 
-    Result send(String endpoint, String token, String eventId, Double latitude, Double longitude) {
+    public Result send(String endpoint, String token, String eventId, Double latitude, Double longitude) {
         HttpURLConnection connection = null;
         try {
             if (cancelled || Thread.currentThread().isInterrupted()) return new Result(0, -1);
@@ -40,7 +45,7 @@ final class MotionAlertClient {
             connection.setRequestProperty("Authorization", "Bearer " + token);
             connection.setDoOutput(true);
             JSONObject body = new JSONObject();
-            body.put("origen", "MOVIMIENTO");
+            body.put("origen", origin);
             body.put("eventoId", eventId);
             body.put("notificarPolicia", false);
             if (latitude != null && longitude != null) {

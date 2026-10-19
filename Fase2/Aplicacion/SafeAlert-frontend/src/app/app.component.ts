@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { addIcons } from 'ionicons';
-import { shieldCheckmarkOutline, homeOutline, peopleOutline, navigateOutline, timeOutline, settingsOutline, personOutline, arrowForwardOutline, chevronForwardOutline, locationOutline, checkmarkOutline, alertOutline, radioOutline, lockClosedOutline, closeOutline, informationCircleOutline, callOutline, searchOutline, personAddOutline } from 'ionicons/icons';
+import { shieldCheckmarkOutline, homeOutline, peopleOutline, navigateOutline, timeOutline, settingsOutline, personOutline, arrowForwardOutline, chevronForwardOutline, locationOutline, checkmarkOutline, alertOutline, radioOutline, lockClosedOutline, closeOutline, informationCircleOutline, callOutline, searchOutline, personAddOutline, volumeHighOutline } from 'ionicons/icons';
 import { HardwareSosService } from './services/hardware-sos.service';
 
 @Component({
@@ -21,7 +21,7 @@ export class AppComponent implements OnInit {
     
   ];
   constructor() {
-    addIcons({ shieldCheckmarkOutline, homeOutline, peopleOutline, navigateOutline, timeOutline, settingsOutline, personOutline, arrowForwardOutline, chevronForwardOutline, locationOutline, checkmarkOutline, alertOutline, radioOutline, lockClosedOutline, closeOutline, informationCircleOutline, callOutline, searchOutline, personAddOutline });
+    addIcons({ shieldCheckmarkOutline, homeOutline, peopleOutline, navigateOutline, timeOutline, settingsOutline, personOutline, arrowForwardOutline, chevronForwardOutline, locationOutline, checkmarkOutline, alertOutline, radioOutline, lockClosedOutline, closeOutline, informationCircleOutline, callOutline, searchOutline, personAddOutline, volumeHighOutline });
   }
   ngOnInit(): void {
     this.hardwareSos.inicializarListener();

@@ -5,11 +5,13 @@ import { Preferences } from '@capacitor/preferences';
 import { environment } from '../../environments/environment';
 import { LoginRequest, RegistroRequest, SesionResponse, UsuarioSesion } from './auth.models';
 import { MotionSosService } from '../settings/movimiento/motion-sos.service';
+import { VolumeSosService } from '../settings/volumen/volume-sos.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly movimiento = inject(MotionSosService);
+  private readonly volumen = inject(VolumeSosService);
   private nativeToken: string | null = null;
   private sincronizacionNativa: Promise<void> = Promise.resolve();
   private readonly url = environment.apiUrl + '/auth';
@@ -64,6 +66,7 @@ export class AuthService {
 
   cerrarSesion() {
     void this.movimiento.detener().catch(() => undefined);
+    void this.volumen.detener().catch(() => undefined);
     return this.http.post<void>(this.url + '/logout', {}, this.options).pipe(
       timeout(15000),
       tap(() => {
@@ -74,6 +77,10 @@ export class AuthService {
   }
 
   async prepararSesionMovimiento() {
+    return this.prepararSesionSos();
+  }
+
+  async prepararSesionSos() {
     await this.sincronizacionNativa;
     const usuario = this.usuario();
     if (!usuario || !this.nativeToken) throw new Error('Inicia sesión nuevamente para preparar la detección nativa.');
@@ -105,6 +112,7 @@ export class AuthService {
     this.nativeToken = null;
     this.sincronizacionNativa = this.sincronizacionNativa.then(async () => {
       await this.movimiento.detener().catch(() => undefined);
+      await this.volumen.detener().catch(() => undefined);
       await Preferences.remove({ key: 'jwt_token' });
       await Preferences.remove({ key: 'usuario_id' });
     }).catch(() => undefined);
