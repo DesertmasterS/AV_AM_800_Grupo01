@@ -1,0 +1,357 @@
+:host {
+  display: block;
+}
+
+.page-wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px 18px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.page-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-decoration: none;
+    margin-bottom: 8px;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: #f8fafc;
+    }
+  }
+
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #ef4444;
+    margin: 0 0 4px;
+  }
+
+  h1 {
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 800;
+    margin: 0 0 6px;
+    color: #f8fafc;
+  }
+
+  p {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 0.96rem;
+  }
+}
+
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: rgba(30, 41, 59, 0.8);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #64748b;
+  }
+
+  &.online {
+    background: rgba(239, 68, 68, 0.16);
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.45);
+
+    .dot {
+      background: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
+    }
+  }
+}
+
+.companion-grid {
+  display: grid;
+  grid-template-columns: 1.65fr 1fr;
+  gap: 20px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 20px;
+  color: #f8fafc;
+}
+
+.map-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  .panel-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.78rem;
+    color: #94a3b8;
+
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+
+    .ping-time {
+      color: #38bdf8;
+      font-weight: 600;
+    }
+  }
+
+  .map-header-info {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+
+    h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .external-maps-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+  }
+
+  .map-container {
+    width: 100%;
+    height: 440px;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    z-index: 1;
+  }
+
+  .status-banner {
+    margin: 0;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    background: rgba(56, 189, 248, 0.12);
+    color: #7dd3fc;
+
+    &.error {
+      background: rgba(239, 68, 68, 0.14);
+      color: #fca5a5;
+    }
+  }
+}
+
+.controls-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.action-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    font-size: 1.25rem;
+  }
+
+  .small-tag {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #ef4444;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 1.2rem;
+  }
+
+  p {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+
+  .primary-btn {
+    margin-top: 6px;
+    width: 100%;
+    padding: 13px 16px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+  }
+
+  .stop-btn {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: 10px;
+    background: transparent;
+    color: #fca5a5;
+    font-weight: 600;
+    cursor: pointer;
+  }
+}
+
+.track-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .card-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    h2 {
+      margin: 0;
+      font-size: 1.15rem;
+    }
+
+    ion-icon {
+      font-size: 1.3rem;
+      color: #38bdf8;
+    }
+  }
+
+  .muted {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 0.88rem;
+  }
+
+  .input-group {
+    display: flex;
+    gap: 8px;
+
+    input {
+      flex: 1;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: #f8fafc;
+      font-size: 0.95rem;
+    }
+
+    .secondary-btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 10px;
+      background: #3b82f6;
+      color: #ffffff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  }
+
+  .telemetry-box {
+    margin-top: 6px;
+    padding: 12px;
+    border-radius: 12px;
+    background: #1e293b;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+
+    div {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      small {
+        font-size: 0.68rem;
+        color: #94a3b8;
+      }
+
+      strong {
+        font-size: 0.84rem;
+        color: #f8fafc;
+      }
+    }
+  }
+}
+
+.page-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.82rem;
+  color: #64748b;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
