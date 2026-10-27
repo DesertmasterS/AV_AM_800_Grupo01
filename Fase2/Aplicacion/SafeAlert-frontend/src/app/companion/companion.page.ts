@@ -1,30 +1,37 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Component, DestroyRef, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ActivatedRoute } from '@angular/router';
 import { IonicModule } from '@ionic/angular/lazy';
-import { ApiService, AlertaPublica } from '../services/api';
+import { Subject, finalize, takeUntil, timeout } from 'rxjs';
+import { AlertaPublica, ApiService } from '../services/api';
 
 declare const L: any;
 
 @Component({
   selector: 'app-companion',
+  standalone: true,
+  imports: [IonicModule],
   templateUrl: './companion.page.html',
   styleUrls: ['./companion.page.scss'],
-  standalone: true,
-  imports: [CommonModule, FormsModule, IonicModule, RouterLink],
 })
 export class CompanionPage implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(ApiService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly viewLeft = new Subject<void>();
 
-  alertaIdInput: number | null = null;
-  alertaActiva: AlertaPublica | null = null;
-  ultimaActualizacion = '-';
-  mensajeEstado = '';
-  errorEstado = false;
-  iniciando = false;
-  transmitiendoLocal = false;
+  private readonly COORDS_SANTIAGO = { latitud: -33.4489, longitud: -70.6693 };
+
+  readonly alertaIdBusqueda = signal('');
+  readonly alertaActiva = signal<AlertaPublica | null>(null);
+  readonly ultimaActualizacion = signal('—');
+  readonly demo = signal(false);
+  readonly iniciando = signal(false);
+  readonly transmitiendo = signal(false);
+  readonly cargandoAlerta = signal(false);
+  readonly mensaje = signal('');
+  readonly error = signal('');
 
   private map: any = null;
   private marker: any = null;
@@ -35,18 +42,31 @@ export class CompanionPage implements OnInit, OnDestroy {
     await this.cargarLeafletCdn();
     this.inicializarMapaBase();
 
-    this.route.queryParamMap.subscribe((params) => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const idParam = Number(params.get('alertaId') || params.get('id'));
       if (idParam > 0) {
-        this.alertaIdInput = idParam;
-        this.iniciarSeguimientoAlerta(idParam);
-      } else {
+        this.alertaIdBusqueda.set(String(idParam));
+        this.iniciarSeguimiento(idParam);
+      } else if (!this.demo()) {
         this.centrarEnUbicacionLocal();
       }
     });
   }
 
+  ionViewWillEnter(): void {
+    const idActual = Number(this.alertaIdBusqueda());
+    if (idActual > 0 && !this.demo()) {
+      this.iniciarSeguimiento(idActual);
+    }
+  }
+
+  ionViewDidLeave(): void {
+    this.viewLeft.next();
+    this.detenerPolling();
+  }
+
   ngOnDestroy(): void {
+    this.viewLeft.next();
     this.detenerPolling();
     if (this.map) {
       this.map.remove();
@@ -54,77 +74,200 @@ export class CompanionPage implements OnInit, OnDestroy {
     }
   }
 
-  seguirAlertaManual(): void {
-    if (!this.alertaIdInput || this.alertaIdInput <= 0) {
-      this.errorEstado = true;
-      this.mensajeEstado = 'Ingresa un ID de alerta válido para monitorear.';
+  buscarAlertaManual(): void {
+    const id = Number(String(this.alertaIdBusqueda()).trim());
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      this.error.set('Ingresa un número de alerta válido para iniciar el seguimiento.');
+      this.mensaje.set('');
       return;
     }
-    this.errorEstado = false;
-    this.iniciarSeguimientoAlerta(this.alertaIdInput);
+    this.demo.set(false);
+    this.error.set('');
+    this.mensaje.set('');
+    this.iniciarSeguimiento(id);
   }
 
-  iniciarMiTrayectoEnVivo(): void {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      this.errorEstado = true;
-      this.mensajeEstado = 'Tu navegador o dispositivo no soporta geolocalización.';
-      return;
+  iniciarMiTrayecto(): void {
+    if (this.iniciando()) return;
+    this.demo.set(false);
+    this.iniciando.set(true);
+    this.error.set('');
+    this.mensaje.set('Obteniendo ubicación GPS y enviando enlace por WhatsApp a tus contactos…');
+
+    let respondioGps = false;
+    const timerRescate = setTimeout(() => {
+      if (!respondioGps) {
+        respondioGps = true;
+        this.despacharAlerta(this.COORDS_SANTIAGO.latitud, this.COORDS_SANTIAGO.longitud, true);
+      }
+    }, 3500);
+
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (respondioGps) return;
+          respondioGps = true;
+          clearTimeout(timerRescate);
+          this.despacharAlerta(pos.coords.latitude, pos.coords.longitude, false);
+        },
+        () => {
+          if (respondioGps) return;
+          respondioGps = true;
+          clearTimeout(timerRescate);
+          this.despacharAlerta(this.COORDS_SANTIAGO.latitud, this.COORDS_SANTIAGO.longitud, true);
+        },
+        { enableHighAccuracy: false, timeout: 3000, maximumAge: 60000 },
+      );
+    } else {
+      respondioGps = true;
+      clearTimeout(timerRescate);
+      this.despacharAlerta(this.COORDS_SANTIAGO.latitud, this.COORDS_SANTIAGO.longitud, true);
     }
-
-    this.iniciando = true;
-    this.errorEstado = false;
-    this.mensajeEstado = 'Obteniendo señal GPS y enviando enlace por WhatsApp a tus contactos…';
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        this.api
-          .enviarAlerta({
-            latitud: latitude,
-            longitud: longitude,
-            origen: 'BOTON',
-            eventoId: crypto.randomUUID(),
-          })
-          .subscribe({
-            next: (res) => {
-              this.iniciando = false;
-              this.transmitiendoLocal = true;
-              const id = res.id ?? res.alertaId;
-              if (id) {
-                this.alertaIdInput = id;
-                this.errorEstado = false;
-                this.mensajeEstado = `Trayecto #${id} activo. Tus contactos recibieron el mapa en vivo por WhatsApp.`;
-                this.iniciarSeguimientoAlerta(id);
-              }
-            },
-            error: () => {
-              this.iniciando = false;
-              this.errorEstado = true;
-              this.mensajeEstado = 'No se pudo iniciar el trayecto. Verifica haber iniciado sesión.';
-            },
-          });
-      },
-      () => {
-        this.iniciando = false;
-        this.errorEstado = true;
-        this.mensajeEstado = 'Permiso de ubicación denegado. Activa el GPS para compartir tu ruta.';
-      },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 },
-    );
   }
 
   detenerMiTrayecto(): void {
+    const id = this.alertaActiva()?.id ?? Number(this.alertaIdBusqueda());
     this.api.detenerTransmisionGps();
-    this.transmitiendoLocal = false;
-    this.mensajeEstado = 'Transmisión de GPS en tiempo real detenida en este dispositivo.';
+    this.transmitiendo.set(false);
+    this.detenerPolling();
+
+    if (id > 0 && !this.demo() && 'detenerAlerta' in this.api) {
+      this.api
+        .detenerAlerta(id)
+        .pipe(takeUntilDestroyed(this.destroyRef), takeUntil(this.viewLeft))
+        .subscribe({
+          next: () => {
+            const actual = this.alertaActiva();
+            if (actual) {
+              this.alertaActiva.set({ ...actual, estado: 'FINALIZADA' });
+            }
+            this.error.set('');
+            this.mensaje.set(`Alerta #${id} detenida y marcada como FINALIZADA.`);
+          },
+          error: () => {
+            this.mensaje.set('Transmisión local detenida.');
+          },
+        });
+    } else {
+      this.error.set('');
+      this.mensaje.set('Transmisión de ubicación en tiempo real detenida correctamente.');
+    }
   }
 
-  iniciarSeguimientoAlerta(alertaId: number): void {
+
+  verEjemplo(): void {
+    this.detenerPolling();
+    this.demo.set(true);
+    this.error.set('');
+    this.mensaje.set('Explorando trayecto simulado en tiempo real.');
+    const simulada: AlertaPublica = {
+      id: 99,
+      alertaId: 99,
+      nombreUsuario: 'Sofía Martínez (Ejemplo)',
+      tipo: 'EMERGENCIA_SOS',
+      estado: 'ACTIVA',
+      latitud: this.COORDS_SANTIAGO.latitud,
+      longitud: this.COORDS_SANTIAGO.longitud,
+      fecha: new Date().toISOString(),
+    };
+    this.alertaActiva.set(simulada);
+    this.ultimaActualizacion.set(this.horaChileActual());
+    this.actualizarPinEnMapa(simulada.latitud!, simulada.longitud!, `🚨 ${simulada.nombreUsuario}`);
+  }
+
+  salirEjemplo(): void {
+    this.demo.set(false);
+    this.alertaActiva.set(null);
+    this.mensaje.set('');
+    this.error.set('');
+    this.centrarEnUbicacionLocal();
+  }
+
+  tieneGps(alerta: AlertaPublica): boolean {
+    return alerta.latitud != null && alerta.longitud != null;
+  }
+
+  formatearCoordenadas(alerta: AlertaPublica): string {
+    if (!this.tieneGps(alerta)) return 'Sin coordenadas';
+    return `${Number(alerta.latitud).toFixed(4)}, ${Number(alerta.longitud).toFixed(4)}`;
+  }
+
+  iniciarSeguimiento(alertaId: number): void {
     this.detenerPolling();
     this.consultarPosicion(alertaId);
     this.pollingTimer = setInterval(() => {
       this.consultarPosicion(alertaId);
     }, 4000);
+  }
+
+  private despacharAlerta(latitud: number, longitud: number, usandoRespaldoPc: boolean): void {
+    this.api
+      .enviarAlerta({
+        latitud,
+        longitud,
+        origen: 'BOTON',
+        eventoId: crypto.randomUUID(),
+      })
+      .pipe(
+        timeout(15000),
+        takeUntilDestroyed(this.destroyRef),
+        takeUntil(this.viewLeft),
+        finalize(() => this.iniciando.set(false)),
+      )
+      .subscribe({
+        next: (res) => {
+          this.transmitiendo.set(true);
+          const id = res.id ?? res.alertaId;
+          if (id) {
+            this.alertaIdBusqueda.set(String(id));
+            this.error.set('');
+            this.mensaje.set(
+              usandoRespaldoPc
+                ? `Trayecto #${id} activo con ubicación de prueba. Enlace enviado por WhatsApp a tu red.`
+                : `Trayecto #${id} activo. Tus contactos recibieron el mapa en vivo por WhatsApp.`,
+            );
+            this.iniciarSeguimiento(id);
+          }
+        },
+        error: (err: unknown) => {
+          if (err instanceof HttpErrorResponse && err.status === 401) {
+            this.error.set('Tu sesión no está disponible. Inicia sesión para compartir tu trayecto en vivo.');
+          } else {
+            this.error.set('No pudimos iniciar el trayecto en vivo. Revisa tu conexión e inténtalo de nuevo.');
+          }
+          this.mensaje.set('');
+        },
+      });
+  }
+
+  private consultarPosicion(alertaId: number): void {
+    this.cargandoAlerta.set(true);
+    this.api
+      .obtenerAlertaEnVivo(alertaId)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        takeUntil(this.viewLeft),
+        finalize(() => this.cargandoAlerta.set(false)),
+      )
+      .subscribe({
+        next: (data) => {
+          this.alertaActiva.set(data);
+          this.ultimaActualizacion.set(this.horaChileActual());
+          this.error.set('');
+
+          if (data.latitud != null && data.longitud != null) {
+            this.actualizarPinEnMapa(
+              Number(data.latitud),
+              Number(data.longitud),
+              `🚨 ${data.nombreUsuario}`,
+            );
+          }
+        },
+        error: () => {
+          this.detenerPolling();
+          this.error.set(`No encontramos una alerta activa con el identificador #${alertaId}.`);
+        },
+      });
   }
 
   private detenerPolling(): void {
@@ -134,53 +277,38 @@ export class CompanionPage implements OnInit, OnDestroy {
     }
   }
 
-  private consultarPosicion(alertaId: number): void {
-    this.api.obtenerAlertaEnVivo(alertaId).subscribe({
-      next: (data) => {
-        this.alertaActiva = data;
-        this.ultimaActualizacion = new Date().toLocaleTimeString('es-CL');
-
-        if (data.latitud != null && data.longitud != null) {
-          this.errorEstado = false;
-          this.actualizarPinEnMapa(
-            Number(data.latitud),
-            Number(data.longitud),
-            `🚨 ${data.nombreUsuario}`,
-          );
-        } else {
-          this.mensajeEstado = 'Alerta activa, esperando primera coordenada GPS del dispositivo…';
-        }
-      },
-      error: () => {
-        this.errorEstado = true;
-        this.mensajeEstado = `No se encontró información para la alerta #${alertaId}.`;
-      },
-    });
+  private horaChileActual(): string {
+    return new Intl.DateTimeFormat('es-CL', {
+      timeZone: 'America/Santiago',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).format(new Date());
   }
 
   private centrarEnUbicacionLocal(): void {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
-
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      this.actualizarPinEnMapa(this.COORDS_SANTIAGO.latitud, this.COORDS_SANTIAGO.longitud, '📍 Ubicación base');
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        this.actualizarPinEnMapa(
-          pos.coords.latitude,
-          pos.coords.longitude,
-          '📍 Tu ubicación actual',
-        );
+        this.actualizarPinEnMapa(pos.coords.latitude, pos.coords.longitude, '📍 Tu ubicación actual');
       },
       () => {
-        this.actualizarPinEnMapa(-33.4489, -70.6693, 'Santiago de Chile');
+        this.actualizarPinEnMapa(this.COORDS_SANTIAGO.latitud, this.COORDS_SANTIAGO.longitud, 'Santiago de Chile');
       },
+      { enableHighAccuracy: false, timeout: 3000 },
     );
   }
 
   private inicializarMapaBase(): void {
     if (typeof L === 'undefined' || this.map) return;
-    const container = document.getElementById('companion-map');
+    const container = typeof document !== 'undefined' ? document.getElementById('companion-map') : null;
     if (!container) return;
 
-    this.map = L.map('companion-map').setView([-33.4489, -70.6693], 15);
+    this.map = L.map('companion-map').setView([this.COORDS_SANTIAGO.latitud, this.COORDS_SANTIAGO.longitud], 15);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
     }).addTo(this.map);
@@ -188,17 +316,17 @@ export class CompanionPage implements OnInit, OnDestroy {
 
   private actualizarPinEnMapa(lat: number, lng: number, etiqueta: string): void {
     if (typeof L === 'undefined' || !this.map) return;
-
     const coords = [lat, lng];
+
     if (!this.marker) {
       this.marker = L.marker(coords).addTo(this.map).bindPopup(etiqueta).openPopup();
       this.circle = L.circle(coords, {
-        color: '#ef4444',
-        fillColor: '#ef4444',
+        color: '#246d60',
+        fillColor: '#246d60',
         fillOpacity: 0.2,
         radius: 30,
       }).addTo(this.map);
-      this.map.setView(coords, 17);
+      this.map.setView(coords, 16);
     } else {
       this.marker.setLatLng(coords).setPopupContent(etiqueta);
       this.circle.setLatLng(coords);
@@ -212,12 +340,10 @@ export class CompanionPage implements OnInit, OnDestroy {
         resolve();
         return;
       }
-
       if (document.querySelector('script[data-leaflet="true"]')) {
         resolve();
         return;
       }
-
       const css = document.createElement('link');
       css.rel = 'stylesheet';
       css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';

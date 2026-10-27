@@ -34,7 +34,7 @@ export class Alerta {
   @Column({ name: 'mensaje_policia_estado', default: 'PENDIENTE' })
   mensajePoliciaEstado: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamp', default: () => "(CURRENT_TIMESTAMP AT TIME ZONE 'America/Santiago')" })
   fecha: Date;
 
   @ManyToOne(() => Usuario, (usuario) => usuario.alertas, {

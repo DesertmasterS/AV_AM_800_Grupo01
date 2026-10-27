@@ -28,6 +28,25 @@ export class AlertasController {
     return await this.alertasService.crearAlerta(dto, usuarioId);
   }
 
+  @Get('activa')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async obtenerAlertaActiva(@Req() req: Request) {
+    const usuarioId = (req as any).user?.id || (req as any).user?.sub;
+    return await this.alertasService.obtenerAlertaActiva(usuarioId);
+  }
+
+  @Patch(':id/detener')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async detenerAlerta(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: Request,
+  ) {
+    const usuarioId = (req as any).user?.id || (req as any).user?.sub;
+    return await this.alertasService.detenerAlerta(id, usuarioId);
+  }
+
   @Patch(':id/ubicacion')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.OK)
@@ -53,7 +72,6 @@ export class AlertasController {
     return await this.alertasService.obtenerHistorial(usuarioId);
   }
 
-  // Ruta pública para que el contacto que abre el link de WhatsApp vea el mapa en vivo
   @Get('publica/:id')
   @HttpCode(HttpStatus.OK)
   async obtenerAlertaPublica(@Param('id', ParseIntPipe) id: number) {

@@ -3,6 +3,9 @@ import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
+// Fijar zona horaria de Chile
+process.env.TZ = 'America/Santiago';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 

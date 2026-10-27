@@ -119,4 +119,26 @@ export class ApiService {
       this.watchId = null;
     }
   }
+  // Consulta si el usuario tiene una alerta ACTIVA en curso (GET /alerta/activa)
+  obtenerAlertaActivaUsuario(): Observable<{ activa: AlertaRegistrada | null }> {
+    return this.http.get<{ activa: AlertaRegistrada | null }>(
+      `${this.apiUrl}/alerta/activa`,
+      { withCredentials: true },
+    );
+  }
+
+  // Detiene la alerta activa en el servidor y apaga la transmisión de GPS local (PATCH /alerta/:id/detener)
+  detenerAlerta(alertaId: number): Observable<{ mensaje: string; id: number; estado: string }> {
+    return this.http
+      .patch<{ mensaje: string; id: number; estado: string }>(
+        `${this.apiUrl}/alerta/${alertaId}/detener`,
+        {},
+        { withCredentials: true },
+      )
+      .pipe(
+        tap(() => {
+          this.detenerTransmisionGps();
+        }),
+      );
+  }
 }

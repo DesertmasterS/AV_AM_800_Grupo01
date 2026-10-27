@@ -37,8 +37,9 @@ import { AppService } from './app.service';
         username: config.get<string>('DB_USER'),
         password: config.get<string>('DB_PASSWORD'),
         database: config.get<string>('DB_NAME'),
-        ssl: {
-          rejectUnauthorized: false,
+        extra: {
+          ssl: { rejectUnauthorized: false },
+          options: '-c timezone=America/Santiago',
         },
         entities: [Usuario, ContactoEmergencia, Cuartel, Alerta],
         synchronize: false,

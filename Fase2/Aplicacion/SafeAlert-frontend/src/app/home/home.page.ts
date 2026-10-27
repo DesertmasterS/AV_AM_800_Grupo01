@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ToastController } from '@ionic/angular';
 import { TimeoutError, finalize, timeout } from 'rxjs';
-import { ApiService } from '../services/api';
+import { AlertaRegistrada, ApiService } from '../services/api';
 
 @Component({
   selector: 'app-home',
@@ -19,11 +19,36 @@ export class HomePage implements OnInit {
 
   conexion: 'checking' | 'online' | 'offline' = 'checking';
   enviando = false;
+  deteniendo = false;
   resultado = '';
   errorAlerta = false;
+  alertaActiva: AlertaRegistrada | null = null;
 
   ngOnInit() {
     this.verificarConexion();
+    this.consultarAlertaActiva();
+  }
+
+  ionViewWillEnter() {
+    this.consultarAlertaActiva();
+  }
+
+  consultarAlertaActiva() {
+    if (!('obtenerAlertaActivaUsuario' in this.apiService)) return;
+    this.apiService
+      .obtenerAlertaActivaUsuario()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.alertaActiva = res?.activa ?? null;
+          this.changeDetector.markForCheck();
+        },
+        error: () => {
+          // Si no ha iniciado sesión (401), simplemente no hay alerta activa
+          this.alertaActiva = null;
+          this.changeDetector.markForCheck();
+        },
+      });
   }
 
   verificarConexion() {
@@ -46,12 +71,21 @@ export class HomePage implements OnInit {
 
   activarAlerta() {
     if (this.enviando) return;
+
+    // Si ya tiene una alerta activa, avisarle que ya está activa y preguntarle si quiere detenerla
+    if (this.alertaActiva) {
+      this.resultado = `Ya tienes la Alerta #${this.alertaActiva.id} activa. Usa el botón de abajo si deseas detenerla.`;
+      this.errorAlerta = false;
+      this.changeDetector.markForCheck();
+      void this.mostrarNotificacion(this.resultado, 'warning');
+      return;
+    }
+
     this.enviando = true;
     this.resultado = '';
     this.errorAlerta = false;
     this.changeDetector.markForCheck();
 
-    // Intentar obtener geolocalización del dispositivo
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -61,14 +95,46 @@ export class HomePage implements OnInit {
           });
         },
         () => {
-          // Si falla el GPS, enviar sin coordenadas; el backend conserva ubicación desconocida.
           this.procesarEnvioAlerta();
         },
-        { enableHighAccuracy: true, timeout: 5000 }
+        { enableHighAccuracy: true, timeout: 5000 },
       );
     } else {
       this.procesarEnvioAlerta();
     }
+  }
+
+  confirmarDetenerAlerta() {
+    if (!this.alertaActiva || this.deteniendo) return;
+    const id = this.alertaActiva.id;
+    this.deteniendo = true;
+    this.changeDetector.markForCheck();
+
+    this.apiService
+      .detenerAlerta(id)
+      .pipe(
+        timeout(10000),
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => {
+          this.deteniendo = false;
+          this.changeDetector.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: () => {
+          this.alertaActiva = null;
+          this.errorAlerta = false;
+          this.resultado = `Alerta #${id} detenida y marcada como FINALIZADA.`;
+          this.changeDetector.markForCheck();
+          void this.mostrarNotificacion(this.resultado, 'success');
+        },
+        error: () => {
+          this.errorAlerta = true;
+          this.resultado = 'No se pudo detener la alerta. Revisa tu conexión e inténtalo nuevamente.';
+          this.changeDetector.markForCheck();
+          void this.mostrarNotificacion(this.resultado, 'danger');
+        },
+      });
   }
 
   private procesarEnvioAlerta(coords?: { latitud: number; longitud: number }) {
@@ -85,8 +151,8 @@ export class HomePage implements OnInit {
       .subscribe({
         next: (alerta: any) => {
           this.conexion = 'online';
+          this.alertaActiva = alerta;
 
-          // Mensaje enriquecido con el cuartel asignado
           if (alerta.cuartelAsignado && alerta.cuartelAsignado !== 'Sin cuartel asignado') {
             this.resultado = `Alerta #${alerta.id} emitida. Cuartel asignado: ${alerta.cuartelAsignado} (a ${alerta.distanciaKm} km).`;
           } else {

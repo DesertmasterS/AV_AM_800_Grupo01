@@ -1,115 +1,101 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { BehaviorSubject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BehaviorSubject, of } from 'rxjs';
 import { CompanionPage } from './companion.page';
 import { ApiService } from '../services/api';
 
 describe('CompanionPage', () => {
-  let component: CompanionPage;
-  let fixture: ComponentFixture<CompanionPage>;
-
   const queryParams$ = new BehaviorSubject(convertToParamMap({}));
-  const apiMock = {
+  const api = {
     obtenerAlertaEnVivo: vi.fn(),
     enviarAlerta: vi.fn(),
     detenerTransmisionGps: vi.fn(),
   };
-  const geolocationMock = {
-    getCurrentPosition: vi.fn(),
-    watchPosition: vi.fn(),
-    clearWatch: vi.fn(),
-  };
+  const geolocation = { getCurrentPosition: vi.fn() };
+  let page: CompanionPage;
 
-  beforeEach(async () => {
-    vi.resetAllMocks();
+  beforeEach(() => {
+    vi.clearAllMocks();
     queryParams$.next(convertToParamMap({}));
-
-    vi.stubGlobal('navigator', { geolocation: geolocationMock });
+    vi.stubGlobal('navigator', { geolocation });
     vi.stubGlobal('L', {
-      map: vi.fn().mockReturnValue({
-        setView: vi.fn().mockReturnThis(),
-        panTo: vi.fn(),
-        remove: vi.fn(),
-      }),
-      tileLayer: vi.fn().mockReturnValue({ addTo: vi.fn() }),
-      marker: vi.fn().mockReturnValue({
-        addTo: vi.fn().mockReturnValue({
-          bindPopup: vi.fn().mockReturnValue({ openPopup: vi.fn() }),
-          setLatLng: vi.fn().mockReturnThis(),
-          setPopupContent: vi.fn(),
-        }),
-      }),
-      circle: vi.fn().mockReturnValue({
-        addTo: vi.fn().mockReturnValue({ setLatLng: vi.fn() }),
-      }),
+      map: vi.fn(),
+      tileLayer: vi.fn(),
+      marker: vi.fn(),
+      circle: vi.fn(),
     });
 
-    apiMock.obtenerAlertaEnVivo.mockReturnValue(
+    api.obtenerAlertaEnVivo.mockReturnValue(
       of({
         id: 21,
         alertaId: 21,
-        nombreUsuario: 'Camila',
+        nombreUsuario: 'Persona Uno',
         tipo: 'EMERGENCIA_SOS',
         estado: 'ACTIVA',
         latitud: -33.4489,
         longitud: -70.6693,
-        fecha: new Date().toISOString(),
+        fecha: '2026-10-27T13:06:28.000Z',
       }),
     );
-    apiMock.enviarAlerta.mockReturnValue(of({ id: 35 }));
+    api.enviarAlerta.mockReturnValue(of({ id: 35 }));
 
-    await TestBed.configureTestingModule({
-      imports: [CompanionPage],
+    TestBed.configureTestingModule({
       providers: [
-        provideRouter([]),
-        { provide: ApiService, useValue: apiMock },
-        {
-          provide: ActivatedRoute,
-          useValue: { queryParamMap: queryParams$.asObservable() },
-        },
+        { provide: ApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { queryParamMap: queryParams$.asObservable() } },
       ],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(CompanionPage);
-    component = fixture.componentInstance;
+    });
+    page = TestBed.runInInjectionContext(() => new CompanionPage());
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    page.ngOnDestroy();
     vi.unstubAllGlobals();
   });
 
-  it('should create', () => {
-    fixture.detectChanges();
-    expect(component).toBeTruthy();
+  it('consulta la alerta en vivo al buscar un ID válido y rechaza IDs inválidos', () => {
+    page.alertaIdBusqueda.set('');
+    page.buscarAlertaManual();
+    expect(api.obtenerAlertaEnVivo).not.toHaveBeenCalled();
+    expect(page.error()).toContain('Ingresa un número');
+
+    page.alertaIdBusqueda.set('21');
+    page.buscarAlertaManual();
+    expect(api.obtenerAlertaEnVivo).toHaveBeenCalledWith(21);
+    expect(page.alertaActiva()?.nombreUsuario).toBe('Persona Uno');
   });
 
-  it('consulta automáticamente la alerta en vivo cuando llega alertaId en la URL de WhatsApp', async () => {
-    queryParams$.next(convertToParamMap({ alertaId: '21' }));
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    expect(apiMock.obtenerAlertaEnVivo).toHaveBeenCalledWith(21);
-    expect(component.alertaActiva?.nombreUsuario).toBe('Camila');
-  });
-
-  it('permite iniciar un trayecto en vivo y activar el monitoreo propio', () => {
-    geolocationMock.getCurrentPosition.mockImplementation((success) =>
+  it('inicia el trayecto en vivo y activa el seguimiento de la alerta creada', () => {
+    geolocation.getCurrentPosition.mockImplementation((success) =>
       success({ coords: { latitude: -33.45, longitude: -70.66 } }),
     );
-
-    fixture.detectChanges();
-    component.iniciarMiTrayectoEnVivo();
-
-    expect(apiMock.enviarAlerta).toHaveBeenCalledWith(
-      expect.objectContaining({
-        latitud: -33.45,
-        longitud: -70.66,
-        origen: 'BOTON',
-      }),
+    page.iniciarMiTrayecto();
+    expect(api.enviarAlerta).toHaveBeenCalledWith(
+      expect.objectContaining({ latitud: -33.45, longitud: -70.66, origen: 'BOTON' }),
     );
-    expect(component.transmitiendoLocal).toBe(true);
-    expect(apiMock.obtenerAlertaEnVivo).toHaveBeenCalledWith(35);
+    expect(page.transmitiendo()).toBe(true);
+    expect(api.obtenerAlertaEnVivo).toHaveBeenCalledWith(35);
+  });
+
+  it('permite explorar el ejemplo sin llamar al backend y detener la transmisión', () => {
+    page.verEjemplo();
+    expect(page.demo()).toBe(true);
+    expect(page.alertaActiva()?.id).toBe(99);
+    expect(api.enviarAlerta).not.toHaveBeenCalled();
+
+    page.detenerMiTrayecto();
+    expect(api.detenerTransmisionGps).toHaveBeenCalledOnce();
+    expect(page.transmitiendo()).toBe(false);
+  });
+
+  it('informa cuando la sesión no está disponible (401) al compartir trayecto', () => {
+    geolocation.getCurrentPosition.mockImplementation((success) =>
+      success({ coords: { latitude: -33.45, longitude: -70.66 } }),
+    );
+    api.enviarAlerta.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 401 })));
+    page.iniciarMiTrayecto();
+    expect(page.error()).toContain('Inicia sesión');
   });
 });

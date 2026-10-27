@@ -1,0 +1,224 @@
+<ion-content>
+  <main class="page-wrap">
+    <header class="page-heading heading">
+      <div>
+        <p class="eyebrow">TUS REGISTROS</p>
+        <h1>Cada alerta cuenta tu historia.</h1>
+        <p>Consulta el registro, horario de Chile y ubicación de las alertas generadas en tu cuenta.</p>
+      </div>
+      <button class="refresh" (click)="cargar()" [disabled]="estado() === 'loading'">
+        <ion-icon name="refresh-outline" aria-hidden="true"></ion-icon>
+        Actualizar registros
+      </button>
+    </header>
+
+    <section class="network">
+      <span class="network-icon"><ion-icon name="time-outline" aria-hidden="true"></ion-icon></span>
+      <div>
+        <span class="banner-eyebrow">REGISTRO DE ACTIVIDAD</span>
+        <h2>Transparencia y respaldo en cada evento.</h2>
+        <p>Revisa cómo, cuándo y desde dónde se activaron tus alertas de emergencia.</p>
+      </div>
+      <div class="total">
+        <strong>{{ estado() === 'ready' ? alertas().length : '—' }}</strong>
+        <span>{{ demo() ? 'alertas de ejemplo' : 'alertas registradas' }}</span>
+      </div>
+    </section>
+
+    @if (demo()) {
+      <div class="notice demo-notice" role="status">
+        <ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon>
+        <div>
+          <strong>Estás explorando un ejemplo</strong>
+          <p>Los registros mostrados son ficticios para que conozcas el detalle y seguimiento de alertas.</p>
+        </div>
+        <button (click)="cargar()">Ver mi cuenta</button>
+      </div>
+    }
+
+    @if (error()) {
+      <p class="feedback failure" role="alert">{{ error() }}</p>
+    }
+
+    <div class="history-grid">
+      <section class="panel list-panel" aria-labelledby="list-title">
+        <div class="list-head">
+          <div>
+            <h2 id="list-title">Alertas registradas</h2>
+            <p>Últimos eventos asociados a tu seguridad.</p>
+          </div>
+          <span class="count-badge">{{ estado() === 'ready' ? filtradas().length : '—' }}</span>
+        </div>
+
+        <div class="filters-bar">
+          <label class="search" for="history-search">
+            <ion-icon name="search-outline" aria-hidden="true"></ion-icon>
+            <input
+              id="history-search"
+              type="search"
+              placeholder="Buscar por #ID, método, estado o fecha"
+              aria-label="Buscar alertas"
+              [value]="busqueda()"
+              (input)="busqueda.set($any($event.target).value)"
+              [disabled]="estado() !== 'ready'">
+          </label>
+
+          <div class="chips" role="group" aria-label="Filtrar por método de disparo">
+            <button type="button" [class.active]="filtroMetodo() === 'TODOS'" (click)="filtroMetodo.set('TODOS')" [disabled]="estado() !== 'ready'">Todos</button>
+            <button type="button" [class.active]="filtroMetodo() === 'BOTON'" (click)="filtroMetodo.set('BOTON')" [disabled]="estado() !== 'ready'">Botón S.O.S</button>
+            <button type="button" [class.active]="filtroMetodo() === 'VOLUMEN'" (click)="filtroMetodo.set('VOLUMEN')" [disabled]="estado() !== 'ready'">Volumen</button>
+            <button type="button" [class.active]="filtroMetodo() === 'MOVIMIENTO'" (click)="filtroMetodo.set('MOVIMIENTO')" [disabled]="estado() !== 'ready'">Movimiento</button>
+          </div>
+        </div>
+
+        @if (estado() === 'loading') {
+          <div class="empty" role="status">
+            <span class="empty-icon"><ion-icon name="time-outline" aria-hidden="true"></ion-icon></span>
+            <h3>Consultando tu historial…</h3>
+            <p>Estamos recuperando tus alertas registradas.</p>
+          </div>
+        } @else if (estado() === 'unauthorized') {
+          <div class="empty">
+            <span class="empty-icon"><ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon></span>
+            <h3>Tus registros están protegidos.</h3>
+            <p>Inicia sesión para consultar el historial de alertas emitidas desde tu cuenta.</p>
+            <a class="primary-link" routerLink="/login">
+              Iniciar sesión <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon>
+            </a>
+            <button class="example" (click)="verEjemplo()">Explorar un ejemplo</button>
+          </div>
+        } @else if (estado() === 'error') {
+          <div class="empty">
+            <span class="empty-icon"><ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon></span>
+            <h3>No pudimos cargar el historial.</h3>
+            <p>El servicio de alertas no está disponible en este momento. Tus registros siguen seguros.</p>
+            <button class="primary-link" (click)="cargar()">
+              Volver a intentar <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon>
+            </button>
+            <button class="example" (click)="verEjemplo()">Explorar un ejemplo</button>
+          </div>
+        } @else if (!alertas().length) {
+          <div class="empty">
+            <span class="empty-icon"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon></span>
+            <h3>Aún no tienes alertas registradas.</h3>
+            <p>Cuando actives una alerta desde el botón S.O.S, volumen o movimiento, aparecerá en este listado.</p>
+            <a class="primary-link" routerLink="/home">
+              Ir al centro de alertas <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon>
+            </a>
+          </div>
+        } @else if (!filtradas().length) {
+          <div class="empty">
+            <h3>No encontramos coincidencias.</h3>
+            <p>Prueba con otro término o restablece los filtros de búsqueda.</p>
+            <button class="example" (click)="limpiarFiltros()">Limpiar búsqueda</button>
+          </div>
+        } @else {
+          <div class="alert-list">
+            @for (alerta of filtradas(); track alerta.id) {
+              <article class="alert-card" [class.selected]="seleccionada()?.id === alerta.id">
+                <div class="alert-top">
+                  <span class="avatar" [attr.data-metodo]="codigoMetodo(alerta.tipo)">
+                    <ion-icon [name]="iconoMetodo(alerta.tipo)" aria-hidden="true"></ion-icon>
+                  </span>
+                  <div class="identity">
+                    <h3>Alerta #{{ alerta.id }} · {{ nombreMetodo(alerta.tipo) }}</h3>
+                    <span class="timestamp">{{ formatearFechaChile(alerta.fecha) }} · Hora de Chile</span>
+                  </div>
+                  <span class="status-tag" [class.active]="alerta.estado === 'ACTIVA'">{{ alerta.estado }}</span>
+                </div>
+
+                <div class="coords-row">
+                  <ion-icon [name]="tieneGps(alerta) ? 'location-outline' : 'warning-outline'" aria-hidden="true"></ion-icon>
+                  <span>
+                    {{ tieneGps(alerta) ? ('Coordenadas: ' + formatearCoordenadas(alerta)) : 'Emitida sin ubicación GPS disponible' }}
+                  </span>
+                </div>
+
+                <div class="actions">
+                  <button type="button" (click)="seleccionar(alerta)" [attr.aria-label]="'Ver detalle de la alerta ' + alerta.id">
+                    Ver detalle <ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+                  </button>
+                  <a class="companion-link" [routerLink]="['/companion']" [queryParams]="{ alertaId: alerta.id }">
+                    Modo acompañante <ion-icon name="navigate-outline" aria-hidden="true"></ion-icon>
+                  </a>
+                </div>
+              </article>
+            }
+          </div>
+        }
+
+        <div class="list-note">
+          <ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon>
+          <span>{{ demo() ? 'Los registros mostrados son de ejemplo.' : 'Se muestran las últimas 20 alertas de tu cuenta.' }}</span>
+        </div>
+      </section>
+
+      <aside class="detail-column">
+        <section class="panel detail-panel" aria-labelledby="detail-title">
+          <span class="form-icon"><ion-icon name="alert-outline" aria-hidden="true"></ion-icon></span>
+          <p class="eyebrow">DETALLE DEL REGISTRO</p>
+          <h2 id="detail-title">
+            {{ seleccionada() ? ('Alerta #' + seleccionada()!.id) : 'Selecciona una alerta' }}
+          </h2>
+          <p class="description">
+            {{ seleccionada() ? 'Información técnica y ubicación del evento seleccionado.' : 'Elige un registro del listado para consultar su ubicación y estado.' }}
+          </p>
+
+          @if (seleccionada(); as actual) {
+            <dl class="detail-list">
+              <div>
+                <dt>Método de disparo</dt>
+                <dd>{{ nombreMetodo(actual.tipo) }}</dd>
+              </div>
+              <div>
+                <dt>Fecha y hora (Chile)</dt>
+                <dd>{{ formatearFechaChile(actual.fecha) }}</dd>
+              </div>
+              <div>
+                <dt>Estado del evento</dt>
+                <dd>{{ actual.estado }}</dd>
+              </div>
+              <div>
+                <dt>Ubicación registrada</dt>
+                <dd>{{ tieneGps(actual) ? formatearCoordenadas(actual) : 'Sin coordenadas GPS' }}</dd>
+              </div>
+            </dl>
+
+            <div class="detail-actions">
+              <a class="save" [routerLink]="['/companion']" [queryParams]="{ alertaId: actual.id }">
+                Abrir en Modo acompañante
+                <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon>
+              </a>
+
+              @if (tieneGps(actual)) {
+                <a
+                  class="maps-btn"
+                  [href]="'https://www.google.com/maps?q=' + actual.latitud + ',' + actual.longitud"
+                  target="_blank"
+                  rel="noopener">
+                  Ver punto en Google Maps
+                  <ion-icon name="open-outline" aria-hidden="true"></ion-icon>
+                </a>
+              }
+            </div>
+          } @else {
+            <p class="footnote">Haz clic en "Ver detalle" sobre cualquier alerta para inspeccionarla aquí.</p>
+          }
+        </section>
+
+        <section class="care-card">
+          <ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon>
+          <h2>Notificaciones a tu red.</h2>
+          <p>Cada vez que se registra una alerta nueva, tus contactos de confianza reciben un aviso por WhatsApp con el enlace de seguimiento en vivo.</p>
+          <span>Contactos notificados</span>
+          <p class="pending">Puedes administrar quiénes reciben tus alertas desde la sección Mis contactos.</p>
+        </section>
+      </aside>
+    </div>
+
+    <footer class="page-footer">
+      <span><ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon> Tu privacidad es parte de tu seguridad.</span>
+      <span>SafeAlert · Seguridad personal</span>
+    </footer>
+  </main>
+</ion-content>

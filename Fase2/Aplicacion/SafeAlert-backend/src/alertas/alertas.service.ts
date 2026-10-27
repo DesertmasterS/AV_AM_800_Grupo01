@@ -303,4 +303,59 @@ export class AlertasService {
       fecha: alerta.fecha,
     };
   }
+   /**
+   * Consulta si el usuario tiene una alerta en estado ACTIVA actualmente
+   */
+  async obtenerAlertaActiva(usuarioId?: number) {
+    this.validarUsuarioId(usuarioId);
+    const activa = await this.alertaRepo.findOne({
+      where: { usuario: { id: usuarioId }, estado: 'ACTIVA' },
+      order: { fecha: 'DESC' },
+    });
+
+    if (!activa) return { activa: null };
+
+    return {
+      activa: {
+        id: activa.id,
+        alertaId: activa.id,
+        tipo: activa.tipo,
+        estado: activa.estado,
+        latitud: activa.latitud,
+        longitud: activa.longitud,
+        fecha: activa.fecha,
+      },
+    };
+  }
+
+  /**
+   * Detiene la alerta activa del usuario y la marca como FINALIZADA en Neon DB
+   */
+  async detenerAlerta(alertaId: number, usuarioId?: number) {
+    this.validarUsuarioId(usuarioId);
+
+    const alerta = await this.alertaRepo.findOne({
+      where: { id: alertaId, usuario: { id: usuarioId } },
+    });
+
+    if (!alerta) {
+      throw new NotFoundException('No se encontró la alerta para este usuario');
+    }
+
+    // Marcar como FINALIZADA esta alerta y cualquier otra que haya quedado ACTIVA anteriormente
+    await this.alertaRepo.update(
+      { usuario: { id: usuarioId }, estado: 'ACTIVA' },
+      { estado: 'FINALIZADA' },
+    );
+
+    alerta.estado = 'FINALIZADA';
+
+    return {
+      mensaje: `Alerta #${alerta.id} detenida y finalizada correctamente`,
+      id: alerta.id,
+      alertaId: alerta.id,
+      estado: alerta.estado,
+      fecha: alerta.fecha,
+    };
+  }
 }

@@ -13,7 +13,7 @@ const routes: Routes = [
   },
   {
     path: 'history',
-    loadComponent: () => import('./views/section.page').then(m => m.SectionPage),
+    loadComponent: () => import('./history/history.page').then(m => m.HistoryPage),
     data: {
       title: 'Historial de alertas',
       eyebrow: 'TUS REGISTROS',

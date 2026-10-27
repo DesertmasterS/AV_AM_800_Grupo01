@@ -19,6 +19,32 @@
         <p class="sos-instruction">Toca el botón para registrar tu alerta</p>
         <p class="result" [class.error]="errorAlerta" role="status" aria-live="polite">{{ resultado }}</p>
         <div class="sos-note"><ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon><p>Al activar S.O.S se envía tu ubicación en tiempo real y el enlace del Modo Acompañante a tus contactos de confianza vía WhatsApp.</p></div>
+        @if (alertaActiva) {
+          <div class="active-alert-banner" role="alertdialog" aria-labelledby="active-alert-title" style="margin-top: 16px; padding: 16px; border-radius: 14px; background: #fff4f2; border: 1px solid #ecced2; color: #8a3e49; text-align: left;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+              <ion-icon name="radio-outline" style="font-size: 22px; color: #ae3e51;"></ion-icon>
+              <strong id="active-alert-title" style="font-size: 13px;">Tienes una alerta activa (#{{ alertaActiva.id }})</strong>
+            </div>
+            <p style="font-size: 12px; margin: 0 0 12px; line-height: 1.6; color: #6a5760;">
+              Tu alerta sigue transmitiendo en estado <strong>ACTIVA</strong>. ¿Deseas detenerla y marcarla como finalizada?
+            </p>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+              <button
+                type="button"
+                (click)="confirmarDetenerAlerta()"
+                [disabled]="deteniendo"
+                style="border: 0; background: #ae3e51; color: #fff; padding: 10px 14px; border-radius: 9px; font-size: 12px; font-weight: 650; cursor: pointer;">
+                {{ deteniendo ? 'Deteniendo…' : 'Sí, detener alerta activa' }}
+              </button>
+              <a
+                [routerLink]="['/companion']"
+                [queryParams]="{ alertaId: alertaActiva.id }"
+                style="border: 1px solid #dec9c8; background: #fff; color: #173844; padding: 10px 14px; border-radius: 9px; font-size: 12px; font-weight: 600; text-decoration: none;">
+                Ver en Modo acompañante
+              </a>
+            </div>
+          </div>
+        }
       </section>
       <aside class="support-column">
         <section class="companion-card" aria-labelledby="companion-title">

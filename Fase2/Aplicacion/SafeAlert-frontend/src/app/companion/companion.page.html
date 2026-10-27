@@ -1,136 +1,172 @@
 <ion-content>
   <main class="page-wrap">
-    <header class="page-heading">
+    <header class="page-heading heading">
       <div>
-        <a routerLink="/home" class="back-link">
-          <ion-icon name="arrow-back-outline" aria-hidden="true"></ion-icon>
-          Volver al centro de seguridad
-        </a>
-        <p class="eyebrow">UN CAMINO EN COMPAÑÍA</p>
-        <h1>Modo acompañante en tiempo real.</h1>
-        <p>Comparte tu trayecto en vivo por WhatsApp o sigue la ubicación de una alerta activa.</p>
+        <p class="eyebrow">CADA TRAYECTO, EN COMPAÑÍA</p>
+        <h1>Llegar con más tranquilidad.</h1>
+        <p>Comparte tu ubicación en tiempo real por WhatsApp o sigue el recorrido de una alerta activa.</p>
       </div>
-
-      <span class="live-badge" [class.online]="alertaActiva !== null">
-        <span class="dot"></span>
-        {{ alertaActiva ? 'TRANSMITIENDO EN VIVO' : 'LISTO PARA ACOMPAÑAR' }}
-      </span>
+      @if (!transmitiendo()) {
+        <button class="share-btn" (click)="iniciarMiTrayecto()" [disabled]="iniciando()">
+          <ion-icon name="navigate-outline" aria-hidden="true"></ion-icon>
+          {{ iniciando() ? 'Activando GPS…' : 'Compartir mi trayecto' }}
+        </button>
+      } @else {
+        <button class="stop-btn" (click)="detenerMiTrayecto()">
+          <ion-icon name="stop-circle-outline" aria-hidden="true"></ion-icon>
+          Detener transmisión
+        </button>
+      }
     </header>
 
+    <section class="network">
+      <span class="network-icon"><ion-icon name="navigate-outline" aria-hidden="true"></ion-icon></span>
+      <div>
+        <span class="banner-eyebrow">SEGUIMIENTO EN TIEMPO REAL</span>
+        <h2>Un espacio para acompañar cada paso.</h2>
+        <p>Cuando activas una alerta o compartes tu ruta, tu red recibe el enlace directo a este mapa en vivo.</p>
+      </div>
+      <div class="total">
+        <strong>{{ alertaActiva() ? ('#' + alertaActiva()!.id) : '—' }}</strong>
+        <span>{{ demo() ? 'trayecto de ejemplo' : alertaActiva() ? 'alerta en seguimiento' : 'sin alerta activa' }}</span>
+      </div>
+    </section>
+
+    @if (demo()) {
+      <div class="notice demo-notice" role="status">
+        <ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon>
+        <div>
+          <strong>Estás explorando un trayecto de ejemplo</strong>
+          <p>La ubicación mostrada es una simulación en Santiago para que pruebes el seguimiento en el mapa.</p>
+        </div>
+        <button (click)="salirEjemplo()" [disabled]="iniciando()">Salir del ejemplo</button>
+      </div>
+    }
+
+    @if (mensaje()) {
+      <p class="feedback success" role="status">{{ mensaje() }}</p>
+    }
+    @if (error()) {
+      <p class="feedback failure" role="alert">{{ error() }}</p>
+    }
+
     <div class="companion-grid">
-      <!-- Panel Principal: Mapa en Tiempo Real -->
       <section class="panel map-panel" aria-labelledby="map-title">
-        <div class="panel-top">
-          <span class="section-label">
-            <ion-icon name="navigate-outline" aria-hidden="true"></ion-icon>
-            RASTREO SATELITAL GPS
+        <div class="list-head">
+          <div>
+            <h2 id="map-title">
+              {{ alertaActiva() ? ('Siguiendo a ' + alertaActiva()!.nombreUsuario) : 'Mapa de acompañamiento' }}
+            </h2>
+            <p>
+              {{ alertaActiva() ? ('Última actualización: ' + ultimaActualizacion() + ' (Hora de Chile)') : 'Conecta una alerta o comparte tu ubicación para iniciar.' }}
+            </p>
+          </div>
+          <span class="status-badge" [class.live]="alertaActiva() !== null">
+            {{ alertaActiva() ? 'EN VIVO' : 'EN ESPERA' }}
           </span>
-          @if (alertaActiva) {
-            <span class="ping-time">Último ping: {{ ultimaActualizacion }}</span>
-          }
         </div>
 
-        <div class="map-header-info">
-          <h2 id="map-title">
-            {{ alertaActiva ? 'Siguiendo a ' + alertaActiva.nombreUsuario : 'Mapa de seguimiento en vivo' }}
-          </h2>
-          @if (alertaActiva && alertaActiva.latitud != null && alertaActiva.longitud != null) {
-            <a
-              class="external-maps-btn"
-              [href]="'https://www.google.com/maps?q=' + alertaActiva.latitud + ',' + alertaActiva.longitud"
-              target="_blank"
-              rel="noopener">
-              <ion-icon name="locate-outline" aria-hidden="true"></ion-icon>
-              Abrir en Google Maps
-            </a>
-          }
+        <div class="search-bar">
+          <label class="search" for="alert-id-search">
+            <ion-icon name="locate-outline" aria-hidden="true"></ion-icon>
+            <input
+              id="alert-id-search"
+              type="number"
+              placeholder="Ingresa el #ID de alerta recibido por WhatsApp (ej. 15)"
+              aria-label="Buscar alerta por ID"
+              [value]="alertaIdBusqueda()"
+              (input)="alertaIdBusqueda.set($any($event.target).value)">
+          </label>
+          <button class="track-btn" type="button" (click)="buscarAlertaManual()" [disabled]="cargandoAlerta()">
+            {{ cargandoAlerta() ? 'Buscando…' : 'Seguir alerta' }}
+          </button>
         </div>
 
-        <!-- Contenedor del mapa Leaflet -->
-        <div id="companion-map" class="map-container" role="region" aria-label="Mapa de ubicación en tiempo real"></div>
+        <div class="map-wrapper">
+          <div id="companion-map" class="map-canvas" role="region" aria-label="Mapa de ubicación en tiempo real"></div>
+        </div>
 
-        @if (mensajeEstado) {
-          <p class="status-banner" [class.error]="errorEstado" role="status" aria-live="polite">
-            {{ mensajeEstado }}
-          </p>
+        @if (alertaActiva(); as actual) {
+          <div class="telemetry-strip">
+            <div>
+              <small>PERSONA EN RUTA</small>
+              <strong>{{ actual.nombreUsuario }}</strong>
+            </div>
+            <div>
+              <small>ESTADO</small>
+              <strong>{{ actual.estado }}</strong>
+            </div>
+            <div>
+              <small>COORDENADAS GPS</small>
+              <strong>{{ tieneGps(actual) ? formatearCoordenadas(actual) : 'Esperando señal…' }}</strong>
+            </div>
+          </div>
         }
+
+        <div class="list-note">
+          <ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon>
+          <span>{{ demo() ? 'Simulación activa: no se envían mensajes reales.' : 'El mapa actualiza la posición automáticamente cada 4 segundos.' }}</span>
+        </div>
       </section>
 
-      <!-- Columna Lateral: Controles de Trayecto y Búsqueda -->
-      <aside class="controls-column">
-        <!-- Tarjeta 1: Iniciar mi propio trayecto acompañado -->
-        <section class="panel action-card" aria-labelledby="share-title">
-          <span class="card-icon">
-            <ion-icon name="share-social-outline" aria-hidden="true"></ion-icon>
-          </span>
-          <span class="small-tag">COMPARTIR MI RUTA</span>
-          <h2 id="share-title">¿Sales hacia tu destino?</h2>
-          <p>Envía automáticamente un enlace por WhatsApp a tus contactos de confianza para que vean cómo avanzas en este mapa.</p>
+      <aside class="editor">
+        <section class="panel form-panel" aria-labelledby="control-title">
+          <span class="form-icon"><ion-icon name="people-outline" aria-hidden="true"></ion-icon></span>
+          <p class="eyebrow">CENTRO DE COMPAÑÍA</p>
+          <h2 id="control-title">Acciones del trayecto</h2>
+          <p class="description">Inicia una transmisión para notificar a tus contactos por WhatsApp o abre la ubicación en Google Maps.</p>
 
-          <button
-            class="primary-btn"
-            (click)="iniciarMiTrayectoEnVivo()"
-            [disabled]="iniciando"
-            [attr.aria-busy]="iniciando">
-            <ion-icon name="radio-outline" aria-hidden="true"></ion-icon>
-            {{ iniciando ? 'Activando GPS…' : 'Compartir mi ubicación en vivo' }}
-          </button>
-
-          @if (transmitiendoLocal) {
-            <button class="stop-btn" (click)="detenerMiTrayecto()">
-              Detener transmisión GPS
+          <div class="control-actions">
+            <button
+              class="save"
+              type="button"
+              (click)="iniciarMiTrayecto()"
+              [disabled]="iniciando()"
+              [attr.aria-busy]="iniciando()">
+              {{ iniciando() ? 'Iniciando transmisión…' : 'Compartir mi ubicación por WhatsApp' }}
+              <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon>
             </button>
-          }
+
+            @if (transmitiendo()) {
+              <button class="cancel-route" type="button" (click)="detenerMiTrayecto()">
+                Confirmar llegada / Detener GPS
+              </button>
+            }
+
+            @if (alertaActiva() && tieneGps(alertaActiva()!)) {
+              <a
+                class="maps-link"
+                [href]="'https://www.google.com/maps?q=' + alertaActiva()!.latitud + ',' + alertaActiva()!.longitud"
+                target="_blank"
+                rel="noopener">
+                Abrir ubicación en Google Maps
+                <ion-icon name="open-outline" aria-hidden="true"></ion-icon>
+              </a>
+            }
+
+            <button class="example" type="button" (click)="verEjemplo()">
+              Explorar un trayecto de ejemplo
+            </button>
+          </div>
+
+          <p class="footnote">
+            {{ demo() ? 'Modo de ejemplo activo.' : 'Al compartir tu ubicación se envía un mensaje de WhatsApp a tus contactos registrados.' }}
+          </p>
         </section>
 
-        <!-- Tarjeta 2: Seguir el código de un contacto -->
-        <section class="panel track-card" aria-labelledby="track-title">
-          <div class="card-heading">
-            <h2 id="track-title">Seguir una alerta</h2>
-            <ion-icon name="eye-outline" aria-hidden="true"></ion-icon>
-          </div>
-          <p class="muted">Ingresa el número de alerta recibido en el mensaje de WhatsApp para visualizar su recorrido en vivo.</p>
-
-          <div class="input-group">
-            <input
-              type="number"
-              [(ngModel)]="alertaIdInput"
-              placeholder="Ej: 15"
-              aria-label="ID de alerta a monitorear"
-            />
-            <button class="secondary-btn" (click)="seguirAlertaManual()">
-              Monitorear
-            </button>
-          </div>
-
-          @if (alertaActiva) {
-            <div class="telemetry-box">
-              <div>
-                <small>ALERTA ID</small>
-                <strong>#{{ alertaActiva.id }}</strong>
-              </div>
-              <div>
-                <small>ESTADO</small>
-                <strong>{{ alertaActiva.estado }}</strong>
-              </div>
-              <div>
-                <small>COORDENADAS</small>
-                <strong>
-                  {{ alertaActiva.latitud != null ? (alertaActiva.latitud | number:'1.4-4') + ', ' + (alertaActiva.longitud | number:'1.4-4') : 'Pendiente' }}
-                </strong>
-              </div>
-            </div>
-          }
+        <section class="care-card">
+          <ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon>
+          <h2>Enlace directo por WhatsApp.</h2>
+          <p>Cuando tú o alguien de tu red activa una alerta, el mensaje de WhatsApp incluye un enlace único que abre esta vista conectada directamente a su recorrido.</p>
+          <span>Sincronización continua</span>
+          <p class="pending">Compatible con alertas por botón S.O.S, botón de volumen y detección de movimiento.</p>
         </section>
       </aside>
     </div>
 
     <footer class="page-footer">
-      <span>
-        <ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon>
-        Ubicación sincronizada en tiempo real con tus contactos de confianza.
-      </span>
-      <span>SafeAlert · Modo acompañante</span>
+      <span><ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon> Tu privacidad es parte de tu seguridad.</span>
+      <span>SafeAlert · Seguridad personal</span>
     </footer>
   </main>
 </ion-content>
