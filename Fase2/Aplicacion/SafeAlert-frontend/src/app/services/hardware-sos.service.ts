@@ -66,26 +66,40 @@ export class HardwareSosService {
   private async ejecutarAlertaSos(): Promise<void> {
     this.enviando = true;
     const coords = await this.obtenerUbicacion();
-    this.apiService.enviarAlerta({ ...coords, notificarPolicia: false, origen: 'VOLUMEN', eventoId: crypto.randomUUID() })
-      .pipe(timeout(15000), finalize(() => { this.enviando = false; })).subscribe({
-      next: async (res) => {
-        await this.mostrarAviso(
-          `Alerta #${res.id ?? res.alertaId} registrada${coords ? ' con ubicación del dispositivo.' : ' sin ubicación disponible.'}`,
-          'danger'
-        );
-      },
-      error: async (err) => {
-        console.error('Error enviando alerta SOS por hardware:', {
-          status: err?.status,
-          message: err?.message,
-          error: err?.error,
-        });
-        await this.mostrarAviso(
-          'Error al emitir alerta de emergencia',
-          'warning'
-        );
-      },
-    });
+    this.apiService
+      .enviarAlerta({
+        ...coords,
+        notificarPolicia: false,
+        origen: 'VOLUMEN',
+        eventoId: crypto.randomUUID(),
+      })
+      .pipe(
+        timeout(15000),
+        finalize(() => {
+          this.enviando = false;
+        }),
+      )
+      .subscribe({
+        next: async (res: any) => {
+          const id = res.id ?? res.alertaId;
+          if (res.yaActiva || res.duplicada) {
+            await this.mostrarAvisoConAccionDetener(id);
+          } else {
+            await this.mostrarAviso(
+              `Alerta #${id} registrada${coords ? ' con ubicación del dispositivo.' : ' sin ubicación disponible.'}`,
+              'danger',
+            );
+          }
+        },
+        error: async (err) => {
+          console.error('Error enviando alerta SOS por hardware:', {
+            status: err?.status,
+            message: err?.message,
+            error: err?.error,
+          });
+          await this.mostrarAviso('Error al emitir alerta de emergencia', 'warning');
+        },
+      });
   }
 
   private obtenerUbicacion(): Promise<{ latitud: number; longitud: number } | undefined> {
@@ -106,6 +120,34 @@ export class HardwareSosService {
       duration: 3500,
       position: 'top',
       color,
+    });
+    await toast.present();
+  }
+  private async mostrarAvisoConAccionDetener(alertaId: number): Promise<void> {
+    const toast = await this.toastController.create({
+      message: `Ya tienes la Alerta #${alertaId} activa. ¿Deseas detenerla?`,
+      duration: 6000,
+      position: 'top',
+      color: 'warning',
+      buttons: [
+        {
+          text: 'Detener alerta',
+          role: 'confirm',
+          handler: () => {
+            if ('detenerAlerta' in this.apiService) {
+              this.apiService.detenerAlerta(alertaId).subscribe({
+                next: () => {
+                  void this.mostrarAviso(`Alerta #${alertaId} detenida y finalizada.`, 'success');
+                },
+              });
+            }
+          },
+        },
+        {
+          text: 'Seguir activo',
+          role: 'cancel',
+        },
+      ],
     });
     await toast.present();
   }

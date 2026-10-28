@@ -23,6 +23,7 @@ public class VolumeProtectionService extends Service {
     public static final String START = "io.ionic.starter.volumen.START";
     private static final String SINGLE = "io.ionic.starter.volumen.SINGLE";
     private static final String STOP = "io.ionic.starter.volumen.STOP";
+    private static final String STOP_ACTIVE_ALERT = "io.ionic.starter.volumen.STOP_ACTIVE_ALERT";
     private static final int NOTICE = 4202;
     private static volatile VolumeProtectionService instance;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -34,6 +35,7 @@ public class VolumeProtectionService extends Service {
     private PowerManager.WakeLock wakeLock;
     private volatile boolean persistent, busy, stopping, locationEnabled;
     private volatile long endsAt;
+    private volatile long activeAlertId = -1;
     private volatile String phase = "inactive";
     private final SharedPreferences.OnSharedPreferenceChangeListener authListener = (prefs, key) -> {
         if ("jwt_token".equals(key) && session != null && !session.token.equals(prefs.getString(key, null))) {
@@ -84,6 +86,9 @@ public class VolumeProtectionService extends Service {
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null || STOP.equals(intent.getAction())) {
             finish("Protección por volumen desactivada."); return START_NOT_STICKY;
+        }
+        if (STOP_ACTIVE_ALERT.equals(intent.getAction())) {
+            stopActiveAlertOnServer(); return START_NOT_STICKY;
         }
         if (session != null) return START_NOT_STICKY;
         try {
@@ -153,13 +158,43 @@ public class VolumeProtectionService extends Service {
                 busy = false;
                 if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
                 String text;
-                if (result.confirmed()) text = "Alerta #" + result.alertId + " registrada" + (latitude == null ? " sin ubicación disponible." : " con ubicación del dispositivo.");
-                else if (result.status == 401 || result.status == 403) { finish("Tu sesión no es válida. Inicia sesión nuevamente."); return; }
-                else text = "No se pudo confirmar el registro del SOS. Revisa tu conexión y el servicio antes de reintentar.";
+                if (result.confirmed()) {
+                    activeAlertId = result.alertId;
+                    if (result.alreadyActive) {
+                        text = "Ya tienes la Alerta #" + result.alertId + " activa. ¿Deseas detenerla? Usa el botón 'Detener alerta' en la notificación o en la app.";
+                    } else {
+                        text = "Alerta #" + result.alertId + " registrada" + (latitude == null ? " sin ubicación disponible." : " con ubicación del dispositivo.");
+                    }
+                } else if (result.status == 401 || result.status == 403) {
+                    finish("Tu sesión no es válida. Inicia sesión nuevamente.");
+                    return;
+                } else {
+                    text = "No se pudo confirmar el registro del SOS. Revisa tu conexión y el servicio antes de reintentar.";
+                }
                 phase = persistent ? "monitoring" : "inactive";
                 message(text);
                 Toast.makeText(this, text, Toast.LENGTH_LONG).show();
-                if (!persistent) { stopForeground(false); stopSelf(); }
+                if (!persistent && !result.confirmed()) { stopForeground(false); stopSelf(); }
+            });
+        });
+    }
+
+    private void stopActiveAlertOnServer() {
+        final long idToStop = activeAlertId;
+        if (idToStop <= 0 || session == null) return;
+        message("Deteniendo alerta #" + idToStop + "…");
+        network.execute(() -> {
+            boolean ok = client.stopAlert(session.endpoint, session.token, idToStop);
+            handler.post(() -> {
+                if (ok) {
+                    activeAlertId = -1;
+                    String msg = "Alerta #" + idToStop + " detenida y finalizada correctamente.";
+                    message(msg);
+                    Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+                    if (!persistent) { stopForeground(false); stopSelf(); }
+                } else {
+                    Toast.makeText(this, "No se pudo detener la alerta #" + idToStop, Toast.LENGTH_LONG).show();
+                }
             });
         });
     }
@@ -168,21 +203,33 @@ public class VolumeProtectionService extends Service {
         PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         PendingIntent stop = PendingIntent.getService(this, 3, new Intent(this, VolumeProtectionService.class).setAction(STOP), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder builder = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CHANNEL) : new Notification.Builder(this);
-        return builder.setSmallIcon(R.drawable.ic_motion_sos).setContentTitle("SafeAlert · Botones de volumen")
+        builder.setSmallIcon(R.drawable.ic_motion_sos).setContentTitle("SafeAlert · Botones de volumen")
             .setContentText(text).setStyle(new Notification.BigTextStyle().bigText(text)).setContentIntent(open)
-            .setOngoing(persistent).setOnlyAlertOnce(true).addAction(0, "Desactivar protección", stop).build();
+            .setOngoing(persistent).setOnlyAlertOnce(true);
+        if (activeAlertId > 0) {
+            PendingIntent stopAlertIntent = PendingIntent.getService(this, 4,
+                new Intent(this, VolumeProtectionService.class).setAction(STOP_ACTIVE_ALERT),
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            builder.addAction(0, "Detener alerta #" + activeAlertId, stopAlertIntent);
+        }
+        builder.addAction(0, "Desactivar protección", stop);
+        return builder.build();
     }
+
     private void message(String text) {
         getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("message", text).apply();
         if (!stopping) getSystemService(NotificationManager.class).notify(NOTICE, notification(text));
     }
+
     private void finish(String text) {
-        stopping = true; persistent = false; busy = false;
+        stopping = true; persistent = false; busy = false; activeAlertId = -1;
         getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("message", text).apply();
         capture.cancel(); client.cancel(); stopSelf();
         Toast.makeText(this, text, Toast.LENGTH_LONG).show();
     }
+
     @Override public IBinder onBind(Intent intent) { return null; }
+
     @Override public void onDestroy() {
         stopping = true;
         handler.removeCallbacksAndMessages(null);

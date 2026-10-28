@@ -34,6 +34,25 @@ export class AlertasService {
       const existente = await this.buscarEvento(eventoId, usuarioId);
       if (existente) return this.respuesta(existente, usuarioId, true);
     }
+    // Verificar si el usuario YA tiene una alerta ACTIVA (por botón, volumen o movimiento)
+    const alertaActiva = await this.alertaRepo.findOne({
+      where: { usuario: { id: usuarioId }, estado: 'ACTIVA' },
+      order: { fecha: 'DESC' },
+    });
+
+    if (alertaActiva) {
+      // Si el nuevo disparo por volumen/movimiento trae coordenadas GPS, actualizamos su posición en vivo
+      if (tieneLatitud && tieneLongitud) {
+        alertaActiva.latitud = dto.latitud!;
+        alertaActiva.longitud = dto.longitud!;
+        await this.alertaRepo.save(alertaActiva);
+      }
+      return {
+        ...this.respuesta(alertaActiva, usuarioId, true),
+        yaActiva: true,
+        mensaje: `Ya tienes la Alerta #${alertaActiva.id} activa en este momento.`,
+      };
+    }
 
     const nuevaAlerta = this.alertaRepo.create({
       tipo: 'EMERGENCIA_' + (origen === OrigenAlerta.BOTON ? 'SOS' : origen),

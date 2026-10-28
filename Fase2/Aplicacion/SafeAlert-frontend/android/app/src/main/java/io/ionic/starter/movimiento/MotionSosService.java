@@ -22,6 +22,7 @@ public class MotionSosService extends Service implements SensorEventListener {
     static final String PREFS = "SafeAlertMotion";
     static final String CANCEL = "io.ionic.starter.movimiento.CANCEL";
     private static final String STOP = "io.ionic.starter.movimiento.STOP";
+    private static final String STOP_ACTIVE_ALERT = "io.ionic.starter.movimiento.STOP_ACTIVE_ALERT";
     private static final int NOTIFICATION_ID = 4201;
     private static final long MAX_SESSION_MS = 2 * 60 * 60 * 1000L;
     private static final long RETRY_LIFETIME_MS = 5 * 60 * 1000L;
@@ -39,6 +40,7 @@ public class MotionSosService extends Service implements SensorEventListener {
     private SosLocationCapture locationCapture;
     private Double eventLatitude, eventLongitude;
     private volatile boolean stopping;
+    private volatile long activeAlertId = -1;
     private String token, endpoint, owner;
     private volatile String eventId;
     private long eventCreatedAt;
@@ -72,6 +74,7 @@ public class MotionSosService extends Service implements SensorEventListener {
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null) { stopSelf(); return START_NOT_STICKY; }
         if (STOP.equals(intent.getAction())) { finish("Detección desactivada por ti."); return START_NOT_STICKY; }
+        if (STOP_ACTIVE_ALERT.equals(intent.getAction())) { stopActiveAlertOnServer(); return START_NOT_STICKY; }
         if (CANCEL.equals(intent.getAction())) {
             if ("countdown".equals(phase)) {
                 handler.removeCallbacks(countdown);
@@ -224,8 +227,13 @@ public class MotionSosService extends Service implements SensorEventListener {
                 if (stopping || !sendingId.equals(eventId)) return;
                 if (result.confirmed()) {
                     clearPending(); phase = "monitoring";
+                    activeAlertId = result.alertId;
                     detector.mute(SystemClock.elapsedRealtime());
-                    message("Alerta #" + result.alertId + " registrada" + (sendingLatitude != null ? " con ubicación del dispositivo." : " sin ubicación disponible.") + " Monitoreo activo.");
+                    if (result.alreadyActive) {
+                        message("Ya tienes la Alerta #" + result.alertId + " activa. ¿Deseas detenerla? Toca 'Detener alerta' aquí o en la app.");
+                    } else {
+                        message("Alerta #" + result.alertId + " registrada" + (sendingLatitude != null ? " con ubicación del dispositivo." : " sin ubicación disponible.") + " Monitoreo activo.");
+                    }
                     updateNotification();
                 } else if (result.status == 401 || result.status == 403) {
                     finish("La sesión venció. Inicia sesión para activar de nuevo la detección.");
@@ -243,6 +251,25 @@ public class MotionSosService extends Service implements SensorEventListener {
         });
     }
 
+    private void stopActiveAlertOnServer() {
+        final long idToStop = activeAlertId;
+        if (idToStop <= 0 || token == null || endpoint == null) return;
+        message("Deteniendo alerta #" + idToStop + "…");
+        updateNotification();
+        network.execute(() -> {
+            boolean ok = client.stopAlert(endpoint, token, idToStop);
+            handler.post(() -> {
+                if (ok) {
+                    activeAlertId = -1;
+                    message("Alerta #" + idToStop + " detenida y marcada como FINALIZADA.");
+                } else {
+                    message("No se pudo detener la alerta #" + idToStop + ". Inténtalo de nuevo.");
+                }
+                updateNotification();
+            });
+        });
+    }
+
     private void clearPending() {
         eventId = null;
         eventLatitude = null; eventLongitude = null;
@@ -251,6 +278,7 @@ public class MotionSosService extends Service implements SensorEventListener {
     private void message(String value) { storage.edit().putString("message", value).apply(); }
     private void finish(String text) {
         stopping = true;
+        activeAlertId = -1;
         client.cancel();
         if (locationCapture != null) locationCapture.cancel();
         if (storage != null) { message(text); clearPending(); }
@@ -272,6 +300,7 @@ public class MotionSosService extends Service implements SensorEventListener {
             .setContentText(text).setStyle(new Notification.BigTextStyle().bigText(text))
             .setContentIntent(content).setOngoing(true).setOnlyAlertOnce(true).setVisibility(Notification.VISIBILITY_PUBLIC);
         if ("countdown".equals(phase)) builder.addAction(0, "Cancelar SOS", action(CANCEL, 1));
+        if (activeAlertId > 0) builder.addAction(0, "Detener alerta #" + activeAlertId, action(STOP_ACTIVE_ALERT, 3));
         builder.addAction(0, "Desactivar detección", action(STOP, 2));
         return builder.build();
     }
@@ -282,6 +311,7 @@ public class MotionSosService extends Service implements SensorEventListener {
     @Override public void onDestroy() {
         if (!stopping && storage != null) message("El monitoreo se detuvo. Puedes activarlo nuevamente desde SafeAlert.");
         stopping = true;
+        activeAlertId = -1;
         if (storage != null) storage.edit().putBoolean("wasRunning", false).apply();
         client.cancel();
         running = false; phase = "inactive"; deadline = 0; sessionEndsAt = 0;

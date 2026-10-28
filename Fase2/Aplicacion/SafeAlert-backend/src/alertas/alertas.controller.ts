@@ -47,6 +47,20 @@ export class AlertasController {
     return await this.alertasService.detenerAlerta(id, usuarioId);
   }
 
+  // Ruta POST equivalente para compatibilidad con Android
+  @Post(':id/detener')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async detenerAlertaPost(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: Request,
+  ) {
+    const usuarioId = (req as any).user?.id || (req as any).user?.sub;
+    return await this.alertasService.detenerAlerta(id, usuarioId);
+  }
+  
+
+
   @Patch(':id/ubicacion')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.OK)
