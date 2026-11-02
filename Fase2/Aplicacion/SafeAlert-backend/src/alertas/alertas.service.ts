@@ -5,6 +5,8 @@ import { Alerta } from '../database/entities/alerta.entity';
 import { Usuario } from '../database/entities/usuario.entity';
 import { ContactoEmergencia } from '../database/entities/contacto-emergencia.entity';
 import { CrearAlertaDto, OrigenAlerta } from './dto/crear-alerta.dto';
+import { randomUUID } from 'node:crypto';
+
 
 @Injectable()
 export class AlertasService {
@@ -29,7 +31,7 @@ export class AlertasService {
     }
 
     const origen = dto.origen ?? OrigenAlerta.BOTON;
-    const eventoId = dto.eventoId ?? null;
+    const eventoId = dto.eventoId?.trim() || randomUUID();
     if (eventoId) {
       const existente = await this.buscarEvento(eventoId, usuarioId);
       if (existente) return this.respuesta(existente, usuarioId, true);

@@ -139,7 +139,14 @@ export class HomePage implements OnInit {
 
   private procesarEnvioAlerta(coords?: { latitud: number; longitud: number }) {
     this.apiService
-      .enviarAlerta(coords)
+      .enviarAlerta({
+        ...(coords ?? {}),
+        origen: 'BOTON',
+        eventoId:
+          typeof crypto !== 'undefined' && 'randomUUID' in crypto
+            ? crypto.randomUUID()
+            : undefined,
+      })
       .pipe(
         timeout(15000),
         takeUntilDestroyed(this.destroyRef),
@@ -152,6 +159,13 @@ export class HomePage implements OnInit {
         next: (alerta: any) => {
           this.conexion = 'online';
           this.alertaActiva = alerta;
+
+          if (alerta.yaActiva || alerta.duplicada) {
+            this.resultado = `Ya tienes la Alerta #${alerta.id} activa en este momento. ¿Deseas detenerla?`;
+            this.changeDetector.markForCheck();
+            void this.mostrarNotificacion(this.resultado, 'warning');
+            return;
+          }
 
           if (alerta.cuartelAsignado && alerta.cuartelAsignado !== 'Sin cuartel asignado') {
             this.resultado = `Alerta #${alerta.id} emitida. Cuartel asignado: ${alerta.cuartelAsignado} (a ${alerta.distanciaKm} km).`;
