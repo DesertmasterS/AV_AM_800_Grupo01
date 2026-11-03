@@ -7,7 +7,6 @@ import { ContactoEmergencia } from '../database/entities/contacto-emergencia.ent
 import { CrearAlertaDto, OrigenAlerta } from './dto/crear-alerta.dto';
 import { randomUUID } from 'node:crypto';
 
-
 @Injectable()
 export class AlertasService {
   private readonly logger = new Logger(AlertasService.name);
@@ -36,6 +35,7 @@ export class AlertasService {
       const existente = await this.buscarEvento(eventoId, usuarioId);
       if (existente) return this.respuesta(existente, usuarioId, true);
     }
+
     // Verificar si el usuario YA tiene una alerta ACTIVA (por botón, volumen o movimiento)
     const alertaActiva = await this.alertaRepo.findOne({
       where: { usuario: { id: usuarioId }, estado: 'ACTIVA' },
@@ -43,10 +43,17 @@ export class AlertasService {
     });
 
     if (alertaActiva) {
-      // Si el nuevo disparo por volumen/movimiento trae coordenadas GPS, actualizamos su posición en vivo
+      let requiereGuardar = false;
+      if (!alertaActiva.eventoId) {
+        alertaActiva.eventoId = eventoId;
+        requiereGuardar = true;
+      }
       if (tieneLatitud && tieneLongitud) {
         alertaActiva.latitud = dto.latitud!;
         alertaActiva.longitud = dto.longitud!;
+        requiereGuardar = true;
+      }
+      if (requiereGuardar) {
         await this.alertaRepo.save(alertaActiva);
       }
       return {
@@ -115,6 +122,7 @@ export class AlertasService {
       mensaje: 'Ubicación en tiempo real actualizada',
       id: actualizada.id,
       alertaId: actualizada.id,
+      eventoId: actualizada.eventoId,
       latitud: actualizada.latitud,
       longitud: actualizada.longitud,
       estado: actualizada.estado,
@@ -123,22 +131,23 @@ export class AlertasService {
   }
 
   /**
-   * Devuelve los datos de la alerta para el mapa en tiempo real del "Modo Acompañante"
+   * Obtiene los datos de una alerta para el Modo Acompañante exigiendo su código UUID único (eventoId)
    */
-  async obtenerAlertaPublica(alertaId: number) {
-    if (!Number.isSafeInteger(alertaId) || alertaId <= 0) {
-      throw new BadRequestException('ID de alerta inválido');
+  async obtenerAlertaPorCodigo(codigo: string) {
+    const codigoLimpio = codigo?.trim();
+    if (!codigoLimpio || codigoLimpio.length < 10) {
+      throw new BadRequestException('Código de seguimiento inválido');
     }
 
     const alerta = await this.alertaRepo.findOne({
-      where: { id: alertaId },
+      where: { eventoId: codigoLimpio },
       relations: {
         usuario: true,
       },
     });
 
     if (!alerta) {
-      throw new NotFoundException('La alerta solicitada no existe');
+      throw new NotFoundException('La alerta solicitada no existe o no tienes acceso');
     }
 
     const nombreUsuario =
@@ -149,6 +158,7 @@ export class AlertasService {
     return {
       id: alerta.id,
       alertaId: alerta.id,
+      eventoId: alerta.eventoId,
       nombreUsuario,
       tipo: alerta.tipo,
       estado: alerta.estado,
@@ -156,6 +166,49 @@ export class AlertasService {
       longitud: alerta.longitud,
       fecha: alerta.fecha,
     };
+  }
+
+  /**
+   * Lista únicamente las alertas de usuarios que tienen al usuario actual registrado como contacto de confianza
+   */
+  async obtenerAlertasCompartidasConmigo(usuarioId?: number) {
+    this.validarUsuarioId(usuarioId);
+    const miUsuario = await this.usuarioRepo.findOne({ where: { id: usuarioId } });
+    if (!miUsuario) throw new UnauthorizedException('Sesión no disponible');
+
+    const misDigitos = this.formatearDigitosChile(miUsuario.telefono);
+
+    // Buscar registros en contactos_emergencia donde aparezca mi teléfono
+    const todosContactos = await this.contactoRepo.find({
+      relations: { usuario: true },
+    });
+
+    const idsUsuariosQueConfiaronEnMi = todosContactos
+      .filter((c) => this.formatearDigitosChile(c.telefono) === misDigitos && c.usuario?.id)
+      .map((c) => c.usuario.id);
+
+    const idsAutorizados = Array.from(new Set([usuarioId, ...idsUsuariosQueConfiaronEnMi]));
+
+    const alertas = await this.alertaRepo
+      .createQueryBuilder('alerta')
+      .leftJoinAndSelect('alerta.usuario', 'usuario')
+      .where('usuario.id IN (:...ids)', { ids: idsAutorizados })
+      .andWhere('alerta.eventoId IS NOT NULL')
+      .orderBy('alerta.fecha', 'DESC')
+      .take(15)
+      .getMany();
+
+    return alertas.map((a) => ({
+      id: a.id,
+      alertaId: a.id,
+      eventoId: a.eventoId,
+      nombreUsuario: a.usuario?.nombre || `Usuario #${a.usuario?.id}`,
+      tipo: a.tipo,
+      estado: a.estado,
+      latitud: a.latitud,
+      longitud: a.longitud,
+      fecha: a.fecha,
+    }));
   }
 
   async obtenerHistorial(usuarioId: number) {
@@ -190,13 +243,15 @@ export class AlertasService {
         (usuario as { email?: string }).email ||
         `Usuario #${usuario.id}`;
 
+      const codigoSecreto = alerta.eventoId || String(alerta.id);
+
       await Promise.allSettled(
         contactos.map((contacto) =>
           this.enviarWhatsAppGreenApi(
             contacto.telefono,
             contacto.nombre,
             nombreUsuario,
-            alerta.id,
+            codigoSecreto, // 
             alerta.latitud,
             alerta.longitud,
             origen,
@@ -215,7 +270,7 @@ export class AlertasService {
     telefonoDestino: string,
     nombreContacto: string,
     nombreUsuario: string,
-    alertaId: number,
+    codigoEvento: string,
     latitud: number | null,
     longitud: number | null,
     origen: OrigenAlerta,
@@ -239,7 +294,8 @@ export class AlertasService {
     const chatId = `${numeroSinMas}@c.us`;
 
     const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:8100').replace(/\/$/, '');
-    const linkModoAcompanante = `${frontendUrl}/companion?alertaId=${alertaId}`;
+    // Enlace seguro con el UUID eventoId (?codigo=...)
+    const linkModoAcompanante = `${frontendUrl}/companion?codigo=${encodeURIComponent(codigoEvento)}`;
 
     const tieneGps = latitud != null && longitud != null;
     const ubicacionTexto = tieneGps
@@ -324,7 +380,8 @@ export class AlertasService {
       fecha: alerta.fecha,
     };
   }
-   /**
+
+  /**
    * Consulta si el usuario tiene una alerta en estado ACTIVA actualmente
    */
   async obtenerAlertaActiva(usuarioId?: number) {
@@ -340,6 +397,7 @@ export class AlertasService {
       activa: {
         id: activa.id,
         alertaId: activa.id,
+        eventoId: activa.eventoId,
         tipo: activa.tipo,
         estado: activa.estado,
         latitud: activa.latitud,
@@ -375,6 +433,7 @@ export class AlertasService {
       mensaje: `Alerta #${alerta.id} detenida y finalizada correctamente`,
       id: alerta.id,
       alertaId: alerta.id,
+      eventoId: alerta.eventoId,
       estado: alerta.estado,
       fecha: alerta.fecha,
     };

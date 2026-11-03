@@ -66,21 +66,25 @@
           </span>
         </div>
 
-        <div class="search-bar">
-          <label class="search" for="alert-id-search">
-            <ion-icon name="locate-outline" aria-hidden="true"></ion-icon>
-            <input
-              id="alert-id-search"
-              type="number"
-              placeholder="Ingresa el #ID de alerta recibido por WhatsApp (ej. 15)"
-              aria-label="Buscar alerta por ID"
-              [value]="alertaIdBusqueda()"
-              (input)="alertaIdBusqueda.set($any($event.target).value)">
-          </label>
-          <button class="track-btn" type="button" (click)="buscarAlertaManual()" [disabled]="cargandoAlerta()">
-            {{ cargandoAlerta() ? 'Buscando…' : 'Seguir alerta' }}
-          </button>
-        </div>
+        @if (alertasCompartidas().length > 0) {
+          <div class="shared-bar" role="region" aria-label="Alertas compartidas con tu número">
+            <span class="shared-label">
+              <ion-icon name="people-outline" aria-hidden="true"></ion-icon>
+              Alertas enviadas a tu red:
+            </span>
+            <div class="shared-chips">
+              @for (item of alertasCompartidas(); track item.id) {
+                <button
+                  type="button"
+                  class="chip-btn"
+                  [class.active]="alertaActiva()?.eventoId === item.eventoId"
+                  (click)="seleccionarCompartida(item)">
+                  {{ item.nombreUsuario }} · #{{ item.id }} ({{ item.estado }})
+                </button>
+              }
+            </div>
+          </div>
+        }
 
         <div class="map-wrapper">
           <div id="companion-map" class="map-canvas" role="region" aria-label="Mapa de ubicación en tiempo real"></div>
