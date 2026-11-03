@@ -36,6 +36,14 @@ export class AlertasController {
     return await this.alertasService.obtenerAlertaActiva(usuarioId);
   }
 
+  @Get('compartidas')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async obtenerCompartidas(@Req() req: Request) {
+    const usuarioId = (req as any).user?.id || (req as any).user?.sub;
+    return await this.alertasService.obtenerAlertasCompartidasConmigo(usuarioId);
+  }
+
   @Patch(':id/detener')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.OK)
@@ -47,7 +55,7 @@ export class AlertasController {
     return await this.alertasService.detenerAlerta(id, usuarioId);
   }
 
-  // Ruta POST equivalente para compatibilidad con Android
+  // Ruta POST equivalente para compatibilidad con HttpURLConnection de Android nativo
   @Post(':id/detener')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.OK)
@@ -58,8 +66,6 @@ export class AlertasController {
     const usuarioId = (req as any).user?.id || (req as any).user?.sub;
     return await this.alertasService.detenerAlerta(id, usuarioId);
   }
-  
-
 
   @Patch(':id/ubicacion')
   @UseGuards(AuthGuard)
@@ -86,9 +92,10 @@ export class AlertasController {
     return await this.alertasService.obtenerHistorial(usuarioId);
   }
 
-  @Get('publica/:id')
+  // Acceso por código UUID secreto (eventoId) enviado en el enlace de WhatsApp
+  @Get('publica/:codigo')
   @HttpCode(HttpStatus.OK)
-  async obtenerAlertaPublica(@Param('id', ParseIntPipe) id: number) {
-    return await this.alertasService.obtenerAlertaPublica(id);
+  async obtenerAlertaPublica(@Param('codigo') codigo: string) {
+    return await this.alertasService.obtenerAlertaPorCodigo(codigo);
   }
 }
