@@ -21,23 +21,39 @@ async function bootstrap() {
     }),
   );
 
-  // 3. CORS preparado para Navegador y Celular (Capacitor)
+  // 3. CORS preparado para Navegador, Cloud Run y Celular (Capacitor APK)
+  const origenesBase = [
+    'http://localhost:8100',      // Ionic Serve
+    'http://localhost:4200',      // Angular CLI
+    'http://127.0.0.1:8100',
+    'capacitor://localhost',      // Capacitor en iOS / Android clásico
+    'https://localhost',          // Capacitor en Android moderno
+    'http://localhost',
+    process.env.FRONTEND_URL?.replace(/\/$/, ''),
+  ].filter((item): item is string => Boolean(item));
+
   app.enableCors({
-    origin: [
-      'http://localhost:8100',      // Ionic Serve
-      'http://localhost:4200',      // Angular CLI
-      'http://127.0.0.1:8100',
-      'capacitor://localhost',       // Capacitor en iOS / Android clásico
-      'https://localhost',          // Capacitor en Android moderno
-      'http://localhost',
-    ],
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      if (
+        !origin ||
+        origenesBase.includes(origin) ||
+        origin.endsWith('.run.app')
+      ) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   });
 
   const port = process.env.PORT || 3000;
-  
+
   await app.listen(port, '0.0.0.0');
   console.log(`Servidor SafeAlert corriendo en ${port}`);
 }
