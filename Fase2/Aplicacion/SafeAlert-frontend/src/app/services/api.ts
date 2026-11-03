@@ -12,6 +12,7 @@ export interface AlertaRegistrada {
   origen?: 'BOTON' | 'MOVIMIENTO' | 'VOLUMEN';
   eventoId?: string | null;
   duplicada?: boolean;
+  yaActiva?: boolean;
   usuarioId?: number | null;
   fecha?: string;
 }
@@ -19,6 +20,7 @@ export interface AlertaRegistrada {
 export interface AlertaPublica {
   id: number;
   alertaId: number;
+  eventoId?: string | null;
   nombreUsuario: string;
   tipo: string;
   estado: string;
@@ -31,20 +33,14 @@ export interface AlertaPublica {
   providedIn: 'root',
 })
 export class ApiService {
-  // 
   private readonly apiUrl = environment.apiUrl;
-
   private readonly http = inject(HttpClient);
-
-  // Identificador del rastreo GPS continuo en vivo
   private watchId: number | null = null;
 
-  // Consultar el endpoint "/" (health-check)
   probarConexion(): Observable<string> {
     return this.http.get(this.apiUrl, { responseType: 'text' });
   }
 
-  // Envío de alerta con credenciales + activación automática de GPS en tiempo real
   enviarAlerta(datos?: {
     latitud?: number;
     longitud?: number;
@@ -66,7 +62,27 @@ export class ApiService {
       );
   }
 
-  // Actualiza la coordenada en vivo de una alerta activa 
+  obtenerAlertaActivaUsuario(): Observable<{ activa: AlertaRegistrada | null }> {
+    return this.http.get<{ activa: AlertaRegistrada | null }>(
+      `${this.apiUrl}/alerta/activa`,
+      { withCredentials: true },
+    );
+  }
+
+  detenerAlerta(alertaId: number): Observable<{ mensaje: string; id: number; estado: string }> {
+    return this.http
+      .patch<{ mensaje: string; id: number; estado: string }>(
+        `${this.apiUrl}/alerta/${alertaId}/detener`,
+        {},
+        { withCredentials: true },
+      )
+      .pipe(
+        tap(() => {
+          this.detenerTransmisionGps();
+        }),
+      );
+  }
+
   actualizarUbicacionAlerta(
     alertaId: number,
     latitud: number,
@@ -79,14 +95,24 @@ export class ApiService {
     );
   }
 
-  // Obtiene los datos en vivo de una alerta para la vista "Modo Acompañante"
-  obtenerAlertaEnVivo(alertaId: number): Observable<AlertaPublica> {
-    return this.http.get<AlertaPublica>(`${this.apiUrl}/alerta/publica/${alertaId}`);
+  obtenerAlertaEnVivo(codigo: string | number): Observable<AlertaPublica> {
+    return this.http.get<AlertaPublica>(
+      `${this.apiUrl}/alerta/publica/${encodeURIComponent(String(codigo))}`,
+    );
   }
 
-  // Inicia el envío continuo de coordenadas cada vez que el usuario se desplaza
+  obtenerAlertasCompartidas(): Observable<AlertaPublica[]> {
+    return this.http.get<AlertaPublica[]>(`${this.apiUrl}/alerta/compartidas`, {
+      withCredentials: true,
+    });
+  }
+
   iniciarTransmisionGpsEnVivo(alertaId: number): void {
-    if (typeof navigator === 'undefined' || !navigator.geolocation || typeof navigator.geolocation.watchPosition !== 'function') {
+    if (
+      typeof navigator === 'undefined' ||
+      !navigator.geolocation ||
+      typeof navigator.geolocation.watchPosition !== 'function'
+    ) {
       return;
     }
 
@@ -112,33 +138,10 @@ export class ApiService {
     }
   }
 
-  // Detiene la transmisión continua de GPS
   detenerTransmisionGps(): void {
     if (this.watchId !== null && typeof navigator !== 'undefined' && navigator.geolocation?.clearWatch) {
       navigator.geolocation.clearWatch(this.watchId);
       this.watchId = null;
     }
-  }
-  // Consulta si el usuario tiene una alerta ACTIVA en curso (GET /alerta/activa)
-  obtenerAlertaActivaUsuario(): Observable<{ activa: AlertaRegistrada | null }> {
-    return this.http.get<{ activa: AlertaRegistrada | null }>(
-      `${this.apiUrl}/alerta/activa`,
-      { withCredentials: true },
-    );
-  }
-
-  // Detiene la alerta activa en el servidor y apaga la transmisión de GPS local (PATCH /alerta/:id/detener)
-  detenerAlerta(alertaId: number): Observable<{ mensaje: string; id: number; estado: string }> {
-    return this.http
-      .patch<{ mensaje: string; id: number; estado: string }>(
-        `${this.apiUrl}/alerta/${alertaId}/detener`,
-        {},
-        { withCredentials: true },
-      )
-      .pipe(
-        tap(() => {
-          this.detenerTransmisionGps();
-        }),
-      );
   }
 }

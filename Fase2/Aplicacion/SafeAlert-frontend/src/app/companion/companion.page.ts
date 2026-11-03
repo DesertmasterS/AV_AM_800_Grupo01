@@ -23,7 +23,8 @@ export class CompanionPage implements OnInit, OnDestroy {
 
   private readonly COORDS_SANTIAGO = { latitud: -33.4489, longitud: -70.6693 };
 
-  readonly alertaIdBusqueda = signal('');
+  readonly codigoSeguimiento = signal('');
+  readonly alertasCompartidas = signal<AlertaPublica[]>([]);
   readonly alertaActiva = signal<AlertaPublica | null>(null);
   readonly ultimaActualizacion = signal('—');
   readonly demo = signal(false);
@@ -41,12 +42,13 @@ export class CompanionPage implements OnInit, OnDestroy {
   async ngOnInit(): Promise<void> {
     await this.cargarLeafletCdn();
     this.inicializarMapaBase();
+    this.cargarAlertasCompartidasConmigo();
 
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
-      const idParam = Number(params.get('alertaId') || params.get('id'));
-      if (idParam > 0) {
-        this.alertaIdBusqueda.set(String(idParam));
-        this.iniciarSeguimiento(idParam);
+      const codigoParam = (params.get('codigo') || params.get('alertaId') || params.get('id'))?.trim();
+      if (codigoParam) {
+        this.codigoSeguimiento.set(codigoParam);
+        this.iniciarSeguimiento(codigoParam);
       } else if (!this.demo()) {
         this.centrarEnUbicacionLocal();
       }
@@ -54,9 +56,11 @@ export class CompanionPage implements OnInit, OnDestroy {
   }
 
   ionViewWillEnter(): void {
-    const idActual = Number(this.alertaIdBusqueda());
-    if (idActual > 0 && !this.demo()) {
-      this.iniciarSeguimiento(idActual);
+    const codigoActual = this.codigoSeguimiento();
+    if (codigoActual && !this.demo()) {
+      this.iniciarSeguimiento(codigoActual);
+    } else if (!this.demo()) {
+      this.cargarAlertasCompartidasConmigo();
     }
   }
 
@@ -74,17 +78,34 @@ export class CompanionPage implements OnInit, OnDestroy {
     }
   }
 
-  buscarAlertaManual(): void {
-    const id = Number(String(this.alertaIdBusqueda()).trim());
-    if (!Number.isSafeInteger(id) || id <= 0) {
-      this.error.set('Ingresa un número de alerta válido para iniciar el seguimiento.');
-      this.mensaje.set('');
-      return;
-    }
+  cargarAlertasCompartidasConmigo(): void {
+    if (!('obtenerAlertasCompartidas' in this.api)) return;
+    this.api
+      .obtenerAlertasCompartidas()
+      .pipe(takeUntilDestroyed(this.destroyRef), takeUntil(this.viewLeft))
+      .subscribe({
+        next: (lista) => {
+          this.alertasCompartidas.set(lista ?? []);
+          if (!this.codigoSeguimiento() && lista?.length) {
+            const primeraConCodigo = lista.find((a) => Boolean(a.eventoId));
+            if (primeraConCodigo?.eventoId) {
+              this.seleccionarCompartida(primeraConCodigo);
+            }
+          }
+        },
+        error: () => {
+          this.alertasCompartidas.set([]);
+        },
+      });
+  }
+
+  seleccionarCompartida(alerta: AlertaPublica): void {
+    if (!alerta.eventoId) return;
     this.demo.set(false);
     this.error.set('');
     this.mensaje.set('');
-    this.iniciarSeguimiento(id);
+    this.codigoSeguimiento.set(alerta.eventoId);
+    this.iniciarSeguimiento(alerta.eventoId);
   }
 
   iniciarMiTrayecto(): void {
@@ -126,12 +147,12 @@ export class CompanionPage implements OnInit, OnDestroy {
   }
 
   detenerMiTrayecto(): void {
-    const id = this.alertaActiva()?.id ?? Number(this.alertaIdBusqueda());
+    const id = this.alertaActiva()?.id;
     this.api.detenerTransmisionGps();
     this.transmitiendo.set(false);
     this.detenerPolling();
 
-    if (id > 0 && !this.demo() && 'detenerAlerta' in this.api) {
+    if (id && id > 0 && !this.demo() && 'detenerAlerta' in this.api) {
       this.api
         .detenerAlerta(id)
         .pipe(takeUntilDestroyed(this.destroyRef), takeUntil(this.viewLeft))
@@ -143,6 +164,7 @@ export class CompanionPage implements OnInit, OnDestroy {
             }
             this.error.set('');
             this.mensaje.set(`Alerta #${id} detenida y marcada como FINALIZADA.`);
+            this.cargarAlertasCompartidasConmigo();
           },
           error: () => {
             this.mensaje.set('Transmisión local detenida.');
@@ -154,7 +176,6 @@ export class CompanionPage implements OnInit, OnDestroy {
     }
   }
 
-
   verEjemplo(): void {
     this.detenerPolling();
     this.demo.set(true);
@@ -163,6 +184,7 @@ export class CompanionPage implements OnInit, OnDestroy {
     const simulada: AlertaPublica = {
       id: 99,
       alertaId: 99,
+      eventoId: 'demo-uuid-99',
       nombreUsuario: 'Sofía Martínez (Ejemplo)',
       tipo: 'EMERGENCIA_SOS',
       estado: 'ACTIVA',
@@ -192,21 +214,22 @@ export class CompanionPage implements OnInit, OnDestroy {
     return `${Number(alerta.latitud).toFixed(4)}, ${Number(alerta.longitud).toFixed(4)}`;
   }
 
-  iniciarSeguimiento(alertaId: number): void {
+  iniciarSeguimiento(codigo: string): void {
     this.detenerPolling();
-    this.consultarPosicion(alertaId);
+    this.consultarPosicion(codigo);
     this.pollingTimer = setInterval(() => {
-      this.consultarPosicion(alertaId);
+      this.consultarPosicion(codigo);
     }, 4000);
   }
 
   private despacharAlerta(latitud: number, longitud: number, usandoRespaldoPc: boolean): void {
+    const nuevoEventoId = crypto.randomUUID();
     this.api
       .enviarAlerta({
         latitud,
         longitud,
         origen: 'BOTON',
-        eventoId: crypto.randomUUID(),
+        eventoId: nuevoEventoId,
       })
       .pipe(
         timeout(15000),
@@ -218,16 +241,16 @@ export class CompanionPage implements OnInit, OnDestroy {
         next: (res) => {
           this.transmitiendo.set(true);
           const id = res.id ?? res.alertaId;
-          if (id) {
-            this.alertaIdBusqueda.set(String(id));
-            this.error.set('');
-            this.mensaje.set(
-              usandoRespaldoPc
-                ? `Trayecto #${id} activo con ubicación de prueba. Enlace enviado por WhatsApp a tu red.`
-                : `Trayecto #${id} activo. Tus contactos recibieron el mapa en vivo por WhatsApp.`,
-            );
-            this.iniciarSeguimiento(id);
-          }
+          const codigo = res.eventoId || nuevoEventoId;
+          this.codigoSeguimiento.set(codigo);
+          this.error.set('');
+          this.mensaje.set(
+            usandoRespaldoPc
+              ? `Trayecto #${id} activo con ubicación de prueba. Enlace enviado por WhatsApp a tu red.`
+              : `Trayecto #${id} activo. Tus contactos recibieron el mapa en vivo por WhatsApp.`,
+          );
+          this.iniciarSeguimiento(codigo);
+          this.cargarAlertasCompartidasConmigo();
         },
         error: (err: unknown) => {
           if (err instanceof HttpErrorResponse && err.status === 401) {
@@ -240,10 +263,10 @@ export class CompanionPage implements OnInit, OnDestroy {
       });
   }
 
-  private consultarPosicion(alertaId: number): void {
+  private consultarPosicion(codigo: string): void {
     this.cargandoAlerta.set(true);
     this.api
-      .obtenerAlertaEnVivo(alertaId)
+      .obtenerAlertaEnVivo(codigo)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         takeUntil(this.viewLeft),
@@ -265,7 +288,7 @@ export class CompanionPage implements OnInit, OnDestroy {
         },
         error: () => {
           this.detenerPolling();
-          this.error.set(`No encontramos una alerta activa con el identificador #${alertaId}.`);
+          this.error.set('No tienes acceso a esta alerta o el código de seguimiento no es válido.');
         },
       });
   }
