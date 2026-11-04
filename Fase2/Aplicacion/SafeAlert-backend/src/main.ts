@@ -21,13 +21,13 @@ async function bootstrap() {
     }),
   );
 
-  // 3. CORS preparado para Navegador, Cloud Run y Celular (Capacitor APK)
-  const origenesBase = [
-    'http://localhost:8100',      // Ionic Serve
-    'http://localhost:4200',      // Angular CLI
+  // 3. CORS conectado a FRONTEND_URL y conexiones propias
+  const origenesPermitidos = [
+    'http://localhost:8100',
+    'http://localhost:4200',
     'http://127.0.0.1:8100',
-    'capacitor://localhost',      // Capacitor en iOS / Android clásico
-    'https://localhost',          // Capacitor en Android moderno
+    'capacitor://localhost',
+    'https://localhost',
     'http://localhost',
     process.env.FRONTEND_URL?.replace(/\/$/, ''),
   ].filter((item): item is string => Boolean(item));
@@ -37,11 +37,7 @@ async function bootstrap() {
       origin: string | undefined,
       callback: (err: Error | null, allow?: boolean) => void,
     ) => {
-      if (
-        !origin ||
-        origenesBase.includes(origin) ||
-        origin.endsWith('.run.app')
-      ) {
+      if (!origin || origenesPermitidos.includes(origin)) {
         callback(null, true);
       } else {
         callback(null, false);

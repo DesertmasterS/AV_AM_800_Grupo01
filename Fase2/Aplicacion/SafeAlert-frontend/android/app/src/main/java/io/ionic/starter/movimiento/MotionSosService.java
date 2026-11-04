@@ -53,6 +53,13 @@ public class MotionSosService extends Service implements SensorEventListener {
     private final SharedPreferences.OnSharedPreferenceChangeListener authListener = (prefs, key) -> {
         if ("jwt_token".equals(key) && !java.util.Objects.equals(token, prefs.getString("jwt_token", null))) {
             handler.post(() -> finish("La sesión cambió. Detección detenida."));
+        } else if ("stopped_alert_id".equals(key) && activeAlertId > 0) {
+            handler.post(() -> {
+                long stoppedId = activeAlertId;
+                activeAlertId = -1;
+                message("Alerta #" + stoppedId + " detenida desde SafeAlert. Monitoreo activo.");
+                updateNotification();
+            });
         }
     };
 
@@ -106,7 +113,6 @@ public class MotionSosService extends Service implements SensorEventListener {
                     startForeground(NOTIFICATION_ID, notification, types);
                 } catch (SecurityException denied) {
                     if (!locationEnabled) throw denied;
-                    // GPS desactivado o permiso revocado durante el inicio: mantener el SOS sin ubicación.
                     locationEnabled = false;
                     startForeground(NOTIFICATION_ID, notification,
                         Build.VERSION.SDK_INT >= 34 ? ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE : 0);

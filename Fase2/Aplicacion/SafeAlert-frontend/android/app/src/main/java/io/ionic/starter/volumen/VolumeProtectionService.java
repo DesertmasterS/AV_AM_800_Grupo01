@@ -40,6 +40,17 @@ public class VolumeProtectionService extends Service {
     private final SharedPreferences.OnSharedPreferenceChangeListener authListener = (prefs, key) -> {
         if ("jwt_token".equals(key) && session != null && !session.token.equals(prefs.getString(key, null))) {
             handler.post(() -> finish("La sesión cambió. Protección por volumen detenida."));
+        } else if ("stopped_alert_id".equals(key) && activeAlertId > 0) {
+            handler.post(() -> {
+                long stoppedId = activeAlertId;
+                activeAlertId = -1;
+                if (!persistent) {
+                    stopForeground(true);
+                    stopSelf();
+                } else {
+                    message("Alerta #" + stoppedId + " detenida desde SafeAlert. Protección por volumen activa.");
+                }
+            });
         }
     };
 

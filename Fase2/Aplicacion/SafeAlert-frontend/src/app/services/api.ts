@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Observable, Subject, tap } from 'rxjs';
+import { Preferences } from '@capacitor/preferences';
 import { environment } from '../../environments/environment';
 
 export interface AlertaRegistrada {
@@ -37,6 +38,10 @@ export class ApiService {
   private readonly http = inject(HttpClient);
   private watchId: number | null = null;
 
+  // Emite un evento cada vez que se crea o detiene una alerta dentro de la app
+  private readonly alertaActualizadaSubject = new Subject<void>();
+  readonly cambiosAlerta$ = this.alertaActualizadaSubject.asObservable();
+
   probarConexion(): Observable<string> {
     return this.http.get(this.apiUrl, { responseType: 'text' });
   }
@@ -58,6 +63,7 @@ export class ApiService {
           if (alertaId) {
             this.iniciarTransmisionGpsEnVivo(alertaId);
           }
+          this.alertaActualizadaSubject.next();
         }),
       );
   }
@@ -79,6 +85,11 @@ export class ApiService {
       .pipe(
         tap(() => {
           this.detenerTransmisionGps();
+          this.alertaActualizadaSubject.next();
+          void Preferences.set({
+            key: 'stopped_alert_id',
+            value: `${alertaId}:${Date.now()}`,
+          }).catch(() => undefined);
         }),
       );
   }
@@ -134,7 +145,7 @@ export class ApiService {
         },
       );
     } catch {
-      // Ignorar si el entorno no soporta geolocalización continua
+      
     }
   }
 

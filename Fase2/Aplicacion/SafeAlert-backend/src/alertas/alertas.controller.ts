@@ -15,6 +15,8 @@ import type { Request } from 'express';
 import { AlertasService } from './alertas.service';
 import { CrearAlertaDto } from './dto/crear-alerta.dto';
 import { AuthGuard } from '../auth/auth.guard';
+import { ActualizarUbicacionDto } from './dto/actualizar-ubicacion.dto';
+
 
 @Controller('alerta')
 export class AlertasController {
@@ -72,14 +74,14 @@ export class AlertasController {
   @HttpCode(HttpStatus.OK)
   async actualizarUbicacion(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { latitud: number; longitud: number },
+    @Body() dto: ActualizarUbicacionDto,
     @Req() req: Request,
   ) {
     const usuarioId = (req as any).user?.id || (req as any).user?.sub;
     return await this.alertasService.actualizarUbicacion(
       id,
-      body.latitud,
-      body.longitud,
+      dto.latitud,
+      dto.longitud,
       usuarioId,
     );
   }

@@ -339,10 +339,18 @@ export class CompanionPage implements OnInit, OnDestroy {
 
   private actualizarPinEnMapa(lat: number, lng: number, etiqueta: string): void {
     if (typeof L === 'undefined' || !this.map) return;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
     const coords = [lat, lng];
 
+    
+    const popupSeguro = typeof document !== 'undefined' ? document.createElement('strong') : etiqueta;
+    if (typeof popupSeguro !== 'string') {
+      popupSeguro.textContent = etiqueta;
+    }
+
     if (!this.marker) {
-      this.marker = L.marker(coords).addTo(this.map).bindPopup(etiqueta).openPopup();
+      this.marker = L.marker(coords).addTo(this.map).bindPopup(popupSeguro).openPopup();
       this.circle = L.circle(coords, {
         color: '#246d60',
         fillColor: '#246d60',
@@ -351,7 +359,7 @@ export class CompanionPage implements OnInit, OnDestroy {
       }).addTo(this.map);
       this.map.setView(coords, 16);
     } else {
-      this.marker.setLatLng(coords).setPopupContent(etiqueta);
+      this.marker.setLatLng(coords).setPopupContent(popupSeguro);
       this.circle.setLatLng(coords);
       this.map.panTo(coords, { animate: true });
     }
@@ -370,10 +378,14 @@ export class CompanionPage implements OnInit, OnDestroy {
       const css = document.createElement('link');
       css.rel = 'stylesheet';
       css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      css.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+      css.crossOrigin = 'anonymous';
       document.head.appendChild(css);
 
       const script = document.createElement('script');
       script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
+      script.crossOrigin = 'anonymous';
       script.setAttribute('data-leaflet', 'true');
       script.onload = () => resolve();
       script.onerror = () => resolve();

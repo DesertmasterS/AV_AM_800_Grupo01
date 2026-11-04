@@ -130,12 +130,10 @@ export class AlertasService {
     };
   }
 
-  /**
-   * Obtiene los datos de una alerta para el Modo Acompañante exigiendo su código UUID único (eventoId)
-   */
   async obtenerAlertaPorCodigo(codigo: string) {
     const codigoLimpio = codigo?.trim();
-    if (!codigoLimpio || codigoLimpio.length < 10) {
+    // Validar formato seguro de UUID / token sin caracteres especiales
+    if (!codigoLimpio || !/^[a-zA-Z0-9-]{10,64}$/.test(codigoLimpio)) {
       throw new BadRequestException('Código de seguimiento inválido');
     }
 
@@ -150,26 +148,29 @@ export class AlertasService {
       throw new NotFoundException('La alerta solicitada no existe o no tienes acceso');
     }
 
-    const nombreUsuario =
-      (alerta.usuario as { nombre?: string; email?: string })?.nombre ||
-      (alerta.usuario as { email?: string })?.email ||
-      `Usuario #${alerta.usuario?.id ?? ''}`;
+    // Exponer únicamente el nombre (nunca el correo electrónico ni teléfono)
+    const nombreSeguro =
+      (alerta.usuario as { nombre?: string })?.nombre?.trim() || 'Usuario SafeAlert';
+
+    const estaActiva = alerta.estado === 'ACTIVA';
 
     return {
       id: alerta.id,
       alertaId: alerta.id,
       eventoId: alerta.eventoId,
-      nombreUsuario,
+      nombreUsuario: nombreSeguro,
       tipo: alerta.tipo,
       estado: alerta.estado,
-      latitud: alerta.latitud,
-      longitud: alerta.longitud,
+      // Si la alerta ya fue detenida/finalizada, dejar de exponer sus coordenadas públicamente
+      latitud: estaActiva ? alerta.latitud : null,
+      longitud: estaActiva ? alerta.longitud : null,
       fecha: alerta.fecha,
     };
   }
 
   /**
-   * Lista únicamente las alertas de usuarios que tienen al usuario actual registrado como contacto de confianza
+   * Lista únicamente las alertas de usuarios que tienen al 
+   * usuario actual registrado como contacto de confianza
    */
   async obtenerAlertasCompartidasConmigo(usuarioId?: number) {
     this.validarUsuarioId(usuarioId);
@@ -177,17 +178,22 @@ export class AlertasService {
     if (!miUsuario) throw new UnauthorizedException('Sesión no disponible');
 
     const misDigitos = this.formatearDigitosChile(miUsuario.telefono);
+    const ultimosOcho = misDigitos ? misDigitos.slice(-8) : '';
 
-    // Buscar registros en contactos_emergencia donde aparezca mi teléfono
-    const todosContactos = await this.contactoRepo.find({
-      relations: { usuario: true },
-    });
+    let idsConfiaron: number[] = [];
+    if (ultimosOcho.length === 8) {
+      const coincidencias = await this.contactoRepo
+        .createQueryBuilder('contacto')
+        .innerJoinAndSelect('contacto.usuario', 'usuario')
+        .where("RIGHT(REGEXP_REPLACE(contacto.telefono, '\\D', '', 'g'), 8) = :ultimosOcho", {
+          ultimosOcho,
+        })
+        .getMany();
 
-    const idsUsuariosQueConfiaronEnMi = todosContactos
-      .filter((c) => this.formatearDigitosChile(c.telefono) === misDigitos && c.usuario?.id)
-      .map((c) => c.usuario.id);
+      idsConfiaron = coincidencias.map((c) => c.usuario.id);
+    }
 
-    const idsAutorizados = Array.from(new Set([usuarioId, ...idsUsuariosQueConfiaronEnMi]));
+    const idsAutorizados = Array.from(new Set([usuarioId, ...idsConfiaron]));
 
     const alertas = await this.alertaRepo
       .createQueryBuilder('alerta')
@@ -202,11 +208,11 @@ export class AlertasService {
       id: a.id,
       alertaId: a.id,
       eventoId: a.eventoId,
-      nombreUsuario: a.usuario?.nombre || `Usuario #${a.usuario?.id}`,
+      nombreUsuario: a.usuario?.nombre?.trim() || 'Usuario SafeAlert',
       tipo: a.tipo,
       estado: a.estado,
-      latitud: a.latitud,
-      longitud: a.longitud,
+      latitud: a.estado === 'ACTIVA' ? a.latitud : null,
+      longitud: a.estado === 'ACTIVA' ? a.longitud : null,
       fecha: a.fecha,
     }));
   }

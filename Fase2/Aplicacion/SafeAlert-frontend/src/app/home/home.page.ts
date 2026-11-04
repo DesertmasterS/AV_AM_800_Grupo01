@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, OnDestroy, OnInit, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ToastController } from '@ionic/angular';
@@ -11,7 +11,7 @@ import { AlertaRegistrada, ApiService } from '../services/api';
   styleUrls: ['home.page.scss'],
   standalone: false,
 })
-export class HomePage implements OnInit {
+export class HomePage implements OnInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly apiService = inject(ApiService);
@@ -24,13 +24,50 @@ export class HomePage implements OnInit {
   errorAlerta = false;
   alertaActiva: AlertaRegistrada | null = null;
 
+  private syncInterval: ReturnType<typeof setInterval> | null = null;
+
   ngOnInit() {
     this.verificarConexion();
     this.consultarAlertaActiva();
+
+    // Escuchar alertas disparadas por HardwareSosService o detenidas en otra vista
+    if ('cambiosAlerta$' in this.apiService && this.apiService.cambiosAlerta$) {
+      this.apiService.cambiosAlerta$
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => {
+          this.consultarAlertaActiva();
+        });
+    }
   }
 
   ionViewWillEnter() {
     this.consultarAlertaActiva();
+    this.iniciarSincronizacionActiva();
+  }
+
+  ionViewDidLeave() {
+    this.detenerSincronizacionActiva();
+  }
+
+  ngOnDestroy() {
+    this.detenerSincronizacionActiva();
+  }
+
+  private iniciarSincronizacionActiva() {
+    this.detenerSincronizacionActiva();
+    // Sincroniza cada 3 segundos por si se disparó/detuvo una alerta nativa (Volumen o Movimiento en Android)
+    this.syncInterval = setInterval(() => {
+      if (!this.enviando && !this.deteniendo) {
+        this.consultarAlertaActiva();
+      }
+    }, 3000);
+  }
+
+  private detenerSincronizacionActiva() {
+    if (this.syncInterval) {
+      clearInterval(this.syncInterval);
+      this.syncInterval = null;
+    }
   }
 
   consultarAlertaActiva() {
@@ -40,11 +77,25 @@ export class HomePage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
-          this.alertaActiva = res?.activa ?? null;
+          const nuevaActiva = res?.activa ?? null;
+          const idAnterior = this.alertaActiva?.id ?? null;
+          const idNuevo = nuevaActiva?.id ?? null;
+
+          this.alertaActiva = nuevaActiva;
+
+          // Si apareció una alerta nueva desde Volumen o Movimiento mientras estábamos en Home
+          if (idNuevo && idNuevo !== idAnterior) {
+            this.resultado = `Alerta #${idNuevo} activa en curso.`;
+            this.errorAlerta = false;
+          } else if (!idNuevo && idAnterior) {
+            // Si fue detenida desde la notificación de Android
+            this.resultado = `Alerta #${idAnterior} detenida y marcada como FINALIZADA.`;
+            this.errorAlerta = false;
+          }
+
           this.changeDetector.markForCheck();
         },
         error: () => {
-          // Si no ha iniciado sesión (401), simplemente no hay alerta activa
           this.alertaActiva = null;
           this.changeDetector.markForCheck();
         },
@@ -72,7 +123,6 @@ export class HomePage implements OnInit {
   activarAlerta() {
     if (this.enviando) return;
 
-    // Si ya tiene una alerta activa, avisarle que ya está activa y preguntarle si quiere detenerla
     if (this.alertaActiva) {
       this.resultado = `Ya tienes la Alerta #${this.alertaActiva.id} activa. Usa el botón de abajo si deseas detenerla.`;
       this.errorAlerta = false;
