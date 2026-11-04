@@ -46,13 +46,40 @@ export class CompanionPage implements OnInit, OnDestroy {
 
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const codigoParam = (params.get('codigo') || params.get('alertaId') || params.get('id'))?.trim();
-      if (codigoParam) {
+      if (codigoParam && codigoParam !== 'undefined' && codigoParam !== 'null') {
         this.codigoSeguimiento.set(codigoParam);
         this.iniciarSeguimiento(codigoParam);
-      } else if (!this.demo()) {
-        this.centrarEnUbicacionLocal();
+      } else {
+        // Si entró sin código en la URL, verificar si el propio usuario tiene una alerta activa
+        this.verificarMiPropiaAlertaActiva();
       }
     });
+  }
+
+  private verificarMiPropiaAlertaActiva(): void {
+    if (!('obtenerAlertaActivaUsuario' in this.api)) {
+      this.centrarEnUbicacionLocal();
+      return;
+    }
+    this.api
+      .obtenerAlertaActivaUsuario()
+      .pipe(takeUntilDestroyed(this.destroyRef), takeUntil(this.viewLeft))
+      .subscribe({
+        next: (res) => {
+          const activa = res?.activa;
+          const codigoPropio = activa?.eventoId || (activa?.id ? String(activa.id) : '');
+          if (codigoPropio) {
+            this.transmitiendo.set(true);
+            this.codigoSeguimiento.set(codigoPropio);
+            this.iniciarSeguimiento(codigoPropio);
+          } else if (!this.demo()) {
+            this.centrarEnUbicacionLocal();
+          }
+        },
+        error: () => {
+          if (!this.demo()) this.centrarEnUbicacionLocal();
+        },
+      });
   }
 
   ionViewWillEnter(): void {

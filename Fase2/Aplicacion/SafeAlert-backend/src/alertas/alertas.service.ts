@@ -130,29 +130,57 @@ export class AlertasService {
     };
   }
 
-  async obtenerAlertaPorCodigo(codigo: string) {
+  async obtenerAlertaPorCodigo(codigo: string, usuarioIdSesion?: number) {
     const codigoLimpio = codigo?.trim();
-    // Validar formato seguro de UUID / token sin caracteres especiales
-    if (!codigoLimpio || !/^[a-zA-Z0-9-]{10,64}$/.test(codigoLimpio)) {
+    if (!codigoLimpio || codigoLimpio === 'undefined' || codigoLimpio === 'null') {
       throw new BadRequestException('Código de seguimiento inválido');
     }
 
-    const alerta = await this.alertaRepo.findOne({
-      where: { eventoId: codigoLimpio },
-      relations: {
-        usuario: true,
-      },
-    });
+    let alerta: Alerta | null = null;
+
+    // Si es un código UUID (eventoId)
+    if (/^[a-zA-Z0-9-]{10,64}$/.test(codigoLimpio)) {
+      alerta = await this.alertaRepo.findOne({
+        where: { eventoId: codigoLimpio },
+        relations: { usuario: true },
+      });
+    }
+    // Si es el ID numérico de la alerta (ej. cuando el propio dueño entra desde el Home)
+    else if (/^\d+$/.test(codigoLimpio)) {
+      const idNumerico = Number(codigoLimpio);
+      const candidata = await this.alertaRepo.findOne({
+        where: { id: idNumerico },
+        relations: { usuario: true },
+      });
+
+      if (candidata) {
+        const creadorId = candidata.usuario?.id;
+
+       
+        if (!usuarioIdSesion || creadorId === usuarioIdSesion) {
+          alerta = candidata;
+        } else if (creadorId) {
+          const miUsuario = await this.usuarioRepo.findOne({ where: { id: usuarioIdSesion } });
+          const misDigitos = this.formatearDigitosChile(miUsuario?.telefono);
+          const contactos = await this.contactoRepo.find({
+            where: { usuario: { id: creadorId } },
+          });
+          if (contactos.some((c) => this.formatearDigitosChile(c.telefono) === misDigitos)) {
+            alerta = candidata;
+          }
+        }
+      }
+    }
 
     if (!alerta) {
       throw new NotFoundException('La alerta solicitada no existe o no tienes acceso');
     }
 
-    // Exponer únicamente el nombre (nunca el correo electrónico ni teléfono)
     const nombreSeguro =
-      (alerta.usuario as { nombre?: string })?.nombre?.trim() || 'Usuario SafeAlert';
+      (alerta.usuario as { nombre?: string } | null)?.nombre?.trim() || 'Usuario SafeAlert';
 
-    const estaActiva = alerta.estado === 'ACTIVA';
+    const esDueno = Boolean(usuarioIdSesion && alerta.usuario?.id === usuarioIdSesion);
+    const mostrarCoordenadas = alerta.estado === 'ACTIVA' || esDueno;
 
     return {
       id: alerta.id,
@@ -161,9 +189,8 @@ export class AlertasService {
       nombreUsuario: nombreSeguro,
       tipo: alerta.tipo,
       estado: alerta.estado,
-      // Si la alerta ya fue detenida/finalizada, dejar de exponer sus coordenadas públicamente
-      latitud: estaActiva ? alerta.latitud : null,
-      longitud: estaActiva ? alerta.longitud : null,
+      latitud: mostrarCoordenadas ? alerta.latitud : null,
+      longitud: mostrarCoordenadas ? alerta.longitud : null,
       fecha: alerta.fecha,
     };
   }
