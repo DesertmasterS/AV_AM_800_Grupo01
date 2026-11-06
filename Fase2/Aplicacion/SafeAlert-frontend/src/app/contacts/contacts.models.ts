@@ -3,6 +3,8 @@ export interface ContactoEmergencia {
   nombre: string;
   telefono: string;
   relacion: string | null;
+  confirmado?: boolean;
+  rechazado?: boolean;
   creadoEn?: string;
 }
 export interface ContactoRequest {
