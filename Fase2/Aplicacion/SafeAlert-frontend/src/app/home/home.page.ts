@@ -217,11 +217,7 @@ export class HomePage implements OnInit, OnDestroy {
             return;
           }
 
-          if (alerta.cuartelAsignado && alerta.cuartelAsignado !== 'Sin cuartel asignado') {
-            this.resultado = `Alerta #${alerta.id} emitida. Cuartel asignado: ${alerta.cuartelAsignado} (a ${alerta.distanciaKm} km).`;
-          } else {
-            this.resultado = `Alerta #${alerta.id} registrada con éxito.`;
-          }
+          this.resultado = `Alerta #${alerta.id} registrada con éxito.`;
 
           this.changeDetector.markForCheck();
           void this.mostrarNotificacion(this.resultado, 'success');

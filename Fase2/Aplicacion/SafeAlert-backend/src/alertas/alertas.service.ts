@@ -69,8 +69,6 @@ export class AlertasService {
       latitud: tieneLatitud ? dto.latitud! : null,
       longitud: tieneLongitud ? dto.longitud! : null,
       estado: 'ACTIVA',
-      mensajePoliciaEstado: 'NO_APLICA',
-      cuartel: null,
       usuario,
     });
 

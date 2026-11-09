@@ -54,7 +54,6 @@ public final class SosAlertClient {
             JSONObject body = new JSONObject();
             body.put("origen", origin);
             body.put("eventoId", eventId);
-            body.put("notificarPolicia", false);
             if (latitude != null && longitude != null) {
                 body.put("latitud", latitude);
                 body.put("longitud", longitude);

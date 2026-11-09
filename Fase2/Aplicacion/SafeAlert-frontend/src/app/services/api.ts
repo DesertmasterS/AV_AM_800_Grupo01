@@ -50,7 +50,6 @@ export class ApiService {
   enviarAlerta(datos?: {
     latitud?: number;
     longitud?: number;
-    notificarPolicia?: boolean;
     origen?: 'BOTON' | 'MOVIMIENTO' | 'VOLUMEN';
     eventoId?: string;
   }): Observable<AlertaRegistrada> {

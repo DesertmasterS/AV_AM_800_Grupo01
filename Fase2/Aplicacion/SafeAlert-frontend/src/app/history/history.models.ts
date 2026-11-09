@@ -5,8 +5,6 @@ export interface AlertaHistorial {
   latitud: number | null;
   longitud: number | null;
   estado: string;
-  mensajePoliciaEstado?: string;
-  cuartel?: string | null;
   fecha: string;
 }
 

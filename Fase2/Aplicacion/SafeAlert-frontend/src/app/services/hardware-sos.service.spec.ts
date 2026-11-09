@@ -29,7 +29,7 @@ describe('HardwareSosService', () => {
     expect(api.enviarAlerta).not.toHaveBeenCalled();
     press(); await Promise.resolve();
     expect(api.enviarAlerta).toHaveBeenCalledOnce();
-    expect(api.enviarAlerta).toHaveBeenCalledWith(expect.objectContaining({ origen: 'VOLUMEN', latitud: -33.45, longitud: -70.66, notificarPolicia: false }));
+    expect(api.enviarAlerta).toHaveBeenCalledWith(expect.objectContaining({ origen: 'VOLUMEN', latitud: -33.45, longitud: -70.66 }));
   });
   it('continúa sin coordenadas si se rechaza la ubicación', async () => {
     location.getCurrentPosition.mockImplementation((_success, error) => error());

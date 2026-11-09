@@ -69,7 +69,6 @@ export class HardwareSosService {
     this.apiService
       .enviarAlerta({
         ...coords,
-        notificarPolicia: false,
         origen: 'VOLUMEN',
         eventoId: crypto.randomUUID(),
       })
