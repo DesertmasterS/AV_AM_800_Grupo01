@@ -22,6 +22,15 @@
         } @else {
           <div class="contact-list">
             @for (contacto of filtrados(); track contacto.id) {
+              @if (demo()) {
+                  <span class="tag">Ejemplo</span>
+                } @else if (contacto.confirmado) {
+                  <span class="tag" style="background: #eaf4ed; color: #246d60; font-weight: 650;">Confirmado ✓</span>
+                } @else if (contacto.rechazado) {
+                  <span class="tag" style="background: #fff3f1; color: #9c3b4b; font-weight: 650;">Solicitud rechazada</span>
+                } @else {
+                  <span class="tag" style="background: #fff8eb; color: #9a6700; font-weight: 650;">Pendiente en WhatsApp</span>
+                }
               <article class="contact" [class.editing]="editando() === contacto.id"><div class="contact-top"><span class="avatar">{{ iniciales(contacto.nombre) }}</span><div class="identity"><h3>{{ contacto.nombre }}</h3><span class="relation">{{ contacto.relacion || 'Persona de confianza' }}</span></div>@if (demo()) { <span class="tag">Ejemplo</span> }</div><div class="phone"><ion-icon name="call-outline" aria-hidden="true"></ion-icon><span>{{ contacto.telefono }}</span></div><div class="actions"><button (click)="editar(contacto)" [disabled]="guardando() || eliminando()" [attr.aria-label]="'Editar a ' + contacto.nombre">Editar datos <ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon></button><button class="remove-contact" (click)="porEliminar.set(contacto)" [disabled]="guardando() || eliminando()" [attr.aria-label]="'Eliminar a ' + contacto.nombre">Eliminar</button></div>
                 @if (porEliminar()?.id === contacto.id) { <div class="confirm" role="group" [attr.aria-label]="'Confirmar eliminación de ' + contacto.nombre"><p>¿Eliminar a {{ contacto.nombre }} de {{ demo() ? 'este ejemplo' : 'tu red' }}?</p><div><button (click)="porEliminar.set(null)" [disabled]="eliminando()">Cancelar</button><button class="confirm-delete" (click)="confirmarEliminar()" [disabled]="eliminando()">{{ eliminando() ? 'Eliminando…' : 'Sí, eliminar' }}</button></div></div> }
               </article>
