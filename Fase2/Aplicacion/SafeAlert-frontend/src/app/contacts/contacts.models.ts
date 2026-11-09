@@ -5,12 +5,16 @@ export interface ContactoEmergencia {
   relacion: string | null;
   confirmado?: boolean;
   rechazado?: boolean;
+  notificarActivo?: boolean;
   creadoEn?: string;
 }
+
 export interface ContactoRequest {
-  nombre: string;
-  telefono: string;
-  relacion: string | null;
+  nombre?: string;
+  telefono?: string;
+  relacion?: string | null;
+  notificarActivo?: boolean;
 }
+
 export interface ContactosResponse { contactos: ContactoEmergencia[]; }
 export interface ContactoResponse { contacto: ContactoEmergencia; }

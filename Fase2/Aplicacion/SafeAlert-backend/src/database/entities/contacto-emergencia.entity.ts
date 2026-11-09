@@ -31,4 +31,7 @@ export class ContactoEmergencia {
   
   @Column({ type: 'boolean', default: false })
   rechazado: boolean;
+  
+  @Column({ name: 'notificar_activo', type: 'boolean', default: true })
+  notificarActivo: boolean;
 }

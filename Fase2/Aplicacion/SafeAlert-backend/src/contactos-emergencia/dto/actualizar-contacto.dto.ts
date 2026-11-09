@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class ActualizarContactoDto {
   @IsOptional()
@@ -14,4 +14,8 @@ export class ActualizarContactoDto {
   @IsString()
   @MaxLength(50)
   relacion?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  notificarActivo?: boolean;
 }

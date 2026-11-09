@@ -37,3 +37,75 @@ fieldset { padding: 0; border: 0; margin: 0; min-width: 0; } fieldset:disabled {
 @media (max-width: 1000px) { .contacts-grid { grid-template-columns: 1fr; } .editor { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; align-items: start; } .care-card { margin-top: 0; } }
 @media (max-width: 580px) { .network { align-items: flex-start; } .network > div:not(.total) { flex: 1; min-width: 0; } .network h2 { font-size: 19px; } .network-icon { width: 44px; height: 44px; font-size: 24px; } .total { width: 100%; text-align: left; border: 0; border-top: 1px solid #40616a; padding: 13px 0 0; display: flex; gap: 12px; align-items: center; } .total strong { font-size: 26px; } .editor { grid-template-columns: 1fr; } .list-head, .form-panel { padding: 22px; } .list-head { padding-bottom: 0; } .search { margin-inline: 22px; } .contact-list { padding-inline: 18px; } .field input { font-size: 16px; } .notice { flex-wrap: wrap; padding: 16px; } .notice > div { flex: 1; } .notice button { margin-left: 34px; } .tag { display: none; } }
 .add, .empty-add { border: 0; } .empty-add { background: transparent; } .save:disabled { opacity: .55; cursor: not-allowed; }
+.enable-all-btn {
+  border: 1px solid #c8dbcc;
+  background: #eaf4ed;
+  color: #246d60;
+  border-radius: 9px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.enable-all-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.notify-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 13px;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  background: #eef5ef;
+  border: 1px solid #d5e5d9;
+}
+
+.notify-toggle.paused {
+  background: #f5f7f7;
+  border-color: #dce4e4;
+}
+
+.notify-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #246d60;
+}
+
+.notify-toggle.paused .notify-status {
+  color: #698088;
+}
+
+.notify-status ion-icon {
+  font-size: 16px;
+}
+
+.toggle-msg-btn {
+  border: 1px solid #c3d9cb;
+  background: #ffffff;
+  color: #9e5360;
+  border-radius: 8px;
+  padding: 6px 11px;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.notify-toggle.paused .toggle-msg-btn {
+  background: #246d60;
+  border-color: #246d60;
+  color: #ffffff;
+}
+
+.toggle-msg-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}

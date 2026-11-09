@@ -128,7 +128,7 @@ export class AlertasService {
     };
   }
 
-   async obtenerAlertaPorCodigo(codigo: string, usuarioIdSesion?: number) {
+  async obtenerAlertaPorCodigo(codigo: string, usuarioIdSesion?: number) {
     const codigoLimpio = codigo?.trim();
     if (!codigoLimpio || codigoLimpio === 'undefined' || codigoLimpio === 'null') {
       throw new BadRequestException('Código de seguimiento inválido');
@@ -158,11 +158,16 @@ export class AlertasService {
         if (creadorId > 0 && creadorId === Number(usuarioIdSesion)) {
           alerta = candidata;
         } else if (creadorId > 0) {
-          // O si es un contacto de confianza del dueño
+          // O si es un contacto de confianza confirmado y activo del dueño
           const miUsuario = await this.usuarioRepo.findOne({ where: { id: Number(usuarioIdSesion) } });
           const misDigitos = this.formatearDigitosChile(miUsuario?.telefono);
           const contactos = await this.contactoRepo.find({
-            where: { usuario: { id: creadorId } },
+            where: {
+              usuario: { id: creadorId },
+              confirmado: true,
+              rechazado: false,
+              notificarActivo: true,
+            },
           });
           if (contactos.some((c) => this.formatearDigitosChile(c.telefono) === misDigitos)) {
             alerta = candidata;
@@ -214,6 +219,7 @@ export class AlertasService {
         })
         .andWhere('contacto.confirmado = true')
         .andWhere('contacto.rechazado = false')
+        .andWhere('contacto.notificarActivo = true')
         .getMany();
 
       idsConfiaron = coincidencias.map((c) => c.usuario.id);
@@ -262,11 +268,18 @@ export class AlertasService {
   ): Promise<void> {
     try {
       const contactos = await this.contactoRepo.find({
-        where: { usuario: { id: usuario.id }, confirmado: true },
+        where: {
+          usuario: { id: usuario.id },
+          confirmado: true,
+          rechazado: false,
+          notificarActivo: true, // <-- Solo envía a contactos confirmados con notificaciones activas
+        },
       });
 
       if (!contactos.length) {
-        this.logger.warn(`El usuario ${usuario.id} no tiene contactos de emergencia confirmados.`);
+        this.logger.warn(
+          `El usuario ${usuario.id} no tiene contactos de emergencia confirmados con envío activo.`,
+        );
         return;
       }
 
@@ -283,7 +296,7 @@ export class AlertasService {
             contacto.telefono,
             contacto.nombre,
             nombreUsuario,
-            codigoSecreto, // 
+            codigoSecreto,
             alerta.latitud,
             alerta.longitud,
             origen,

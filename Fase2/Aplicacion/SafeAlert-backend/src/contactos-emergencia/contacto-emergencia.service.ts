@@ -56,10 +56,11 @@ export class ContactosEmergenciaService {
       relacion: dto.relacion ?? null,
       confirmado: false,
       rechazado: false,
+      notificarActivo: true,
       tokenConfirmacion,
       usuario: { id: usuarioId } as Usuario,
     });
-
+    
     const guardado = await this.repo.save(nuevo);
 
     // Enviar invitación única por WhatsApp sin bloquear la respuesta
@@ -101,6 +102,9 @@ export class ContactosEmergenciaService {
     if (dto.nombre !== undefined) contacto.nombre = dto.nombre;
     if (dto.telefono !== undefined) contacto.telefono = dto.telefono;
     if (dto.relacion !== undefined) contacto.relacion = dto.relacion;
+    if (dto.notificarActivo !== undefined) {
+        contacto.notificarActivo = dto.notificarActivo;
+    }
 
     let nuevoToken: string | null = null;
     if (cambioTelefono) {
