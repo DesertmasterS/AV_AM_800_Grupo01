@@ -5,7 +5,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 // Entidades
 import { Usuario } from './database/entities/usuario.entity';
 import { ContactoEmergencia } from './database/entities/contacto-emergencia.entity';
-import { Cuartel } from './database/entities/cuartel.entity';
 import { Alerta } from './database/entities/alerta.entity';
 
 // Módulos funcionales
@@ -41,7 +40,7 @@ import { AppService } from './app.service';
           ssl: { rejectUnauthorized: false },
           options: '-c timezone=America/Santiago',
         },
-        entities: [Usuario, ContactoEmergencia, Cuartel, Alerta],
+        entities: [Usuario, ContactoEmergencia, Alerta],
         synchronize: false,
       }),
     }),
