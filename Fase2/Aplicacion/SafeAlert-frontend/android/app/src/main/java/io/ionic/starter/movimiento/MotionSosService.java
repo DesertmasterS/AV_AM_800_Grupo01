@@ -267,6 +267,7 @@ public class MotionSosService extends Service implements SensorEventListener {
             handler.post(() -> {
                 if (ok) {
                     activeAlertId = -1;
+                    auth.edit().putString("stopped_alert_id", idToStop + ":" + System.currentTimeMillis()).apply();
                     message("Alerta #" + idToStop + " detenida y marcada como FINALIZADA.");
                 } else {
                     message("No se pudo detener la alerta #" + idToStop + ". Inténtalo de nuevo.");

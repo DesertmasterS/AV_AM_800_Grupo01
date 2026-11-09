@@ -154,6 +154,24 @@
                       {{ contacto.notificarActivo === false ? 'Activar envío' : 'Desactivar envío' }}
                     </button>
                   </div>
+                } @else {
+                  <div class="notify-toggle paused">
+                    <div class="notify-status">
+                      <ion-icon name="time-outline" aria-hidden="true"></ion-icon>
+                      <span>
+                        {{ puedeReenviar(contacto) ? 'Ya puedes reenviar la invitación por WhatsApp' : ('Reenvío disponible en ' + horasParaReenviar(contacto) + 'h (o desde el enlace enviado)') }}
+                      </span>
+                    </div>
+                    @if (puedeReenviar(contacto)) {
+                      <button
+                        type="button"
+                        class="toggle-msg-btn"
+                        (click)="reenviarInvitacion(contacto)"
+                        [disabled]="guardando() || eliminando()">
+                        Reenviar solicitud
+                      </button>
+                    }
+                  </div>
                 }
 
                 <div class="actions">
@@ -234,7 +252,7 @@
         <section class="care-card">
           <ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon>
           <h2>Una red que se conoce.</h2>
-          <p>Al registrar un contacto, recibirá una solicitud única por WhatsApp para confirmar que acepta formar parte de tu red de confianza.</p>
+          <p>Al registrar un contacto, recibirá una solicitud por WhatsApp con validez de 48h donde podrá aceptar o revertir su decisión sin instalar la app.</p>
           <span>Control de notificaciones</span>
           <p class="pending">Puedes activar o pausar en cualquier momento a qué contactos confirmados deseas enviarles tus alertas.</p>
         </section>

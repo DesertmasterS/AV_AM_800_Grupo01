@@ -16,7 +16,7 @@ import { ActualizarContactoDto } from './dto/actualizar-contacto.dto';
 export class ContactosEmergenciaService {
   private readonly logger = new Logger(ContactosEmergenciaService.name);
 
-  // Memoria de protección anti-spam: evita reenviar invitaciones si borran y vuelven a crear el contacto
+  // Memoria de protección anti-spam: evita reenviar invitaciones si borran y vuelven a crear el contacto antes de 48h
   private readonly historialEnvios = new Map<
     string,
     { ultimoEnvioMs: number; bloqueadoPorRechazo: boolean }
@@ -60,13 +60,11 @@ export class ContactosEmergenciaService {
       tokenConfirmacion,
       usuario: { id: usuarioId } as Usuario,
     });
-    
+
     const guardado = await this.repo.save(nuevo);
 
-    // Enviar invitación única por WhatsApp sin bloquear la respuesta
-    void this.enviarSolicitudConfirmacionWhatsApp(usuarioId, guardado, tokenConfirmacion);
+    await this.enviarSolicitudConfirmacionWhatsApp(usuarioId, guardado, tokenConfirmacion);
 
-    // No exponer el token secreto en la respuesta JSON al cliente
     delete (guardado as Partial<ContactoEmergencia>).tokenConfirmacion;
     return guardado;
   }
@@ -102,26 +100,72 @@ export class ContactosEmergenciaService {
     if (dto.nombre !== undefined) contacto.nombre = dto.nombre;
     if (dto.telefono !== undefined) contacto.telefono = dto.telefono;
     if (dto.relacion !== undefined) contacto.relacion = dto.relacion;
-    if (dto.notificarActivo !== undefined) {
-        contacto.notificarActivo = dto.notificarActivo;
-    }
+    if (dto.notificarActivo !== undefined) contacto.notificarActivo = dto.notificarActivo;
 
     let nuevoToken: string | null = null;
     if (cambioTelefono) {
       nuevoToken = randomUUID();
       contacto.confirmado = false;
       contacto.rechazado = false;
+      contacto.notificarActivo = true;
       contacto.tokenConfirmacion = nuevoToken;
+      contacto.creadoEn = new Date();
     }
 
     const actualizado = await this.repo.save(contacto);
 
     if (cambioTelefono && nuevoToken) {
-      void this.enviarSolicitudConfirmacionWhatsApp(usuarioId, actualizado, nuevoToken);
+      await this.enviarSolicitudConfirmacionWhatsApp(usuarioId, actualizado, nuevoToken);
     }
 
     delete (actualizado as Partial<ContactoEmergencia>).tokenConfirmacion;
     return actualizado;
+  }
+
+  /**
+   * Propuesta 3: Permite reenviar la solicitud de WhatsApp únicamente si ya transcurrieron 48 horas
+   */
+  async reenviarSolicitud(id: number, usuarioId: number): Promise<ContactoEmergencia> {
+    const contacto = await this.repo.findOne({
+      where: { id, usuario: { id: usuarioId } },
+    });
+
+    if (!contacto) {
+      throw new NotFoundException('Contacto no encontrado');
+    }
+
+    if (contacto.confirmado) {
+      throw new ConflictException('Este contacto ya se encuentra confirmado');
+    }
+
+    const ventana48h = 48 * 60 * 60 * 1000;
+    const tiempoTranscurrido = Date.now() - new Date(contacto.creadoEn).getTime();
+
+    if (tiempoTranscurrido < ventana48h) {
+      const horasRestantes = Math.ceil((ventana48h - tiempoTranscurrido) / (60 * 60 * 1000));
+      throw new ConflictException(
+        `Debes esperar ${horasRestantes}h más antes de poder reenviar la solicitud a este contacto.`,
+      );
+    }
+
+    const nuevoToken = randomUUID();
+    contacto.rechazado = false;
+    contacto.confirmado = false;
+    contacto.notificarActivo = true;
+    contacto.tokenConfirmacion = nuevoToken;
+    contacto.creadoEn = new Date();
+
+    const guardado = await this.repo.save(contacto);
+
+    const digitos = this.formatearDigitosChile(contacto.telefono);
+    if (digitos) {
+      this.historialEnvios.delete(`${usuarioId}:${digitos}`);
+    }
+
+    await this.enviarSolicitudConfirmacionWhatsApp(usuarioId, guardado, nuevoToken);
+
+    delete (guardado as Partial<ContactoEmergencia>).tokenConfirmacion;
+    return guardado;
   }
 
   async eliminar(id: number, usuarioId: number): Promise<void> {
@@ -137,7 +181,7 @@ export class ContactosEmergenciaService {
   }
 
   /**
-   * Genera la página web de confirmación o rechazo (GET muestra los botones, POST confirma o rechaza en la BD)
+   * Propuesta 2: Conserva el token durante 48h para que el destinatario pueda revertir si presionó Rechazar por error
    */
   async generarHtmlConfirmacion(
     token: string,
@@ -147,8 +191,9 @@ export class ContactosEmergenciaService {
     if (!tokenLimpio || !/^[a-zA-Z0-9-]{10,64}$/.test(tokenLimpio)) {
       return this.plantillaHtml(
         'Enlace no válido',
-        'El enlace de solicitud no es válido o ya fue procesado anteriormente.',
+        'El enlace de solicitud no es válido o ya expiró.',
         null,
+        'FINALIZADO',
       );
     }
 
@@ -161,13 +206,13 @@ export class ContactosEmergenciaService {
 
     if (!contacto) {
       return this.plantillaHtml(
-        'Solicitud ya procesada',
-        'Esta solicitud ya fue respondida anteriormente o no se encuentra disponible.',
+        'Solicitud no disponible',
+        'Este enlace ya expiró o no se encuentra disponible.',
         null,
+        'FINALIZADO',
       );
     }
 
-    // Expiración de seguridad: los enlaces de invitación caducan a las 48 horas
     const edadMs = Date.now() - new Date(contacto.creadoEn).getTime();
     if (edadMs > 48 * 60 * 60 * 1000) {
       contacto.tokenConfirmacion = null;
@@ -176,29 +221,47 @@ export class ContactosEmergenciaService {
         'Enlace expirado',
         'Por seguridad, las solicitudes de contacto caducan a las 48 horas.',
         null,
+        'FINALIZADO',
       );
     }
 
     const nombreUsuario = this.escaparHtml(contacto.usuario?.nombre || 'Un usuario de SafeAlert');
     const nombreContacto = this.escaparHtml(contacto.nombre);
+    const digitos = this.formatearDigitosChile(contacto.telefono);
+    const claveSpam = `${contacto.usuario?.id ?? 0}:${digitos}`;
 
     if (accion === 'VER') {
+      if (contacto.rechazado) {
+        return this.plantillaHtml(
+          'Solicitud actualmente rechazada',
+          `Hola <strong>${nombreContacto}</strong>, habías rechazado la solicitud de <strong>${nombreUsuario}</strong>.<br><br>Si presionaste rechazar por equivocación, puedes cambiar tu decisión aquí abajo:`,
+          tokenLimpio,
+          'SOLO_ACEPTAR',
+        );
+      }
+      if (contacto.confirmado) {
+        return this.plantillaHtml(
+          'Ya eres contacto confirmado',
+          `Hola <strong>${nombreContacto}</strong>, ya formas parte de la red de confianza de <strong>${nombreUsuario}</strong>. Si deseas dejar de recibir sus alertas, puedes darte de baja aquí:`,
+          tokenLimpio,
+          'SOLO_RECHAZAR',
+        );
+      }
       return this.plantillaHtml(
         `Hola ${nombreContacto}, ¿aceptas ser contacto de confianza?`,
-        `<strong>${nombreUsuario}</strong> quiere agregarte a su red de apoyo en <strong>SafeAlert</strong>.<br><br>Si aceptas, recibirás alertas por WhatsApp únicamente cuando active una emergencia S.O.S. Si no deseas recibir mensajes, puedes rechazar la solicitud y no volveremos a escribirte.`,
+        `<strong>${nombreUsuario}</strong> quiere agregarte a su red de apoyo en <strong>SafeAlert</strong>.<br><br>Si aceptas, recibirás alertas por WhatsApp únicamente cuando active una emergencia S.O.S. Si no deseas recibir mensajes, puedes rechazar la solicitud.`,
         tokenLimpio,
+        'AMBOS',
       );
     }
 
     if (accion === 'RECHAZAR') {
       contacto.confirmado = false;
       contacto.rechazado = true;
-      contacto.tokenConfirmacion = null;
       await this.repo.save(contacto);
 
-      const digitos = this.formatearDigitosChile(contacto.telefono);
       if (digitos) {
-        this.historialEnvios.set(`${contacto.usuario?.id ?? 0}:${digitos}`, {
+        this.historialEnvios.set(claveSpam, {
           ultimoEnvioMs: Date.now(),
           bloqueadoPorRechazo: true,
         });
@@ -206,21 +269,30 @@ export class ContactosEmergenciaService {
 
       return this.plantillaHtml(
         'Solicitud rechazada',
-        `Hemos registrado tu decisión, <strong>${nombreContacto}</strong>. Tu número ha sido bloqueado para este usuario y <strong>no recibirás más solicitudes ni alertas</strong> de su parte.`,
-        null,
+        `Hemos registrado tu decisión, <strong>${nombreContacto}</strong>. No recibirás solicitudes ni alertas de <strong>${nombreUsuario}</strong>.<br><br><em>¿Presionaste rechazar por equivocación? Puedes revertirlo con el botón de abajo:</em>`,
+        tokenLimpio,
+        'SOLO_ACEPTAR',
       );
     }
 
-    // Acción === 'ACEPTAR'
+    // Acción === 'ACEPTAR' (también revierte si antes había rechazado por error)
     contacto.confirmado = true;
     contacto.rechazado = false;
-    contacto.tokenConfirmacion = null;
+    contacto.notificarActivo = true;
     await this.repo.save(contacto);
+
+    if (digitos) {
+      this.historialEnvios.set(claveSpam, {
+        ultimoEnvioMs: Date.now(),
+        bloqueadoPorRechazo: false,
+      });
+    }
 
     return this.plantillaHtml(
       '¡Solicitud confirmada con éxito!',
       `Gracias, <strong>${nombreContacto}</strong>. Ahora eres parte de la red de confianza verificada de <strong>${nombreUsuario}</strong> en SafeAlert. No necesitas instalar ninguna aplicación.`,
-      null,
+      tokenLimpio,
+      'SOLO_RECHAZAR',
     );
   }
 
@@ -233,24 +305,22 @@ export class ContactosEmergenciaService {
       const digitos = this.formatearDigitosChile(contacto.telefono);
       if (!digitos) return;
 
-      // Escudo Anti-Spam: verificar si este número ya rechazó o ya recibió invitación en las últimas 24h
       const claveSpam = `${usuarioId}:${digitos}`;
       const registroPrevio = this.historialEnvios.get(claveSpam);
-      const ventana24h = 24 * 60 * 60 * 1000;
+      const ventana48h = 48 * 60 * 60 * 1000;
 
-      if (registroPrevio?.bloqueadoPorRechazo) {
+      if (registroPrevio?.bloqueadoPorRechazo && Date.now() - registroPrevio.ultimoEnvioMs < ventana48h) {
         this.logger.warn(
-          `Envío bloqueado: el número ${digitos} rechazó previamente ser contacto del usuario ${usuarioId}.`,
+          `Envío bloqueado (48h): el número ${digitos} rechazó previamente ser contacto del usuario ${usuarioId}.`,
         );
         contacto.rechazado = true;
-        contacto.tokenConfirmacion = null;
         await this.repo.save(contacto);
         return;
       }
 
-      if (registroPrevio && Date.now() - registroPrevio.ultimoEnvioMs < ventana24h) {
+      if (registroPrevio && Date.now() - registroPrevio.ultimoEnvioMs < ventana48h) {
         this.logger.warn(
-          `Cooldown activo (24h): se omite reenvío de invitación a ${digitos} para evitar spam.`,
+          `Cooldown activo (48h): se omite reenvío de invitación a ${digitos} para evitar spam.`,
         );
         return;
       }
@@ -280,7 +350,7 @@ export class ContactosEmergenciaService {
         `Hola *${contacto.nombre}*, *${nombreUsuario}* quiere agregarte como su contacto de emergencia.\n\n` +
         `Para *aceptar o rechazar* esta solicitud (sin instalar ninguna aplicación), ingresa aquí:\n` +
         `${linkConfirmacion}\n\n` +
-        `_Este es un mensaje único. Si no confirmas o rechazas la solicitud, no recibirás ningún otro mensaje._`;
+        `_Este enlace tiene una validez de 48 horas. Si no confirmas la solicitud, no recibirás alertas._`;
 
       const url = `${apiHost}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`;
       const response = await fetch(url, {
@@ -297,7 +367,7 @@ export class ContactosEmergenciaService {
           ultimoEnvioMs: Date.now(),
           bloqueadoPorRechazo: false,
         });
-        this.logger.log(`Invitación única enviada por WhatsApp a ${digitos}@c.us`);
+        this.logger.log(`Invitación enviada por WhatsApp a ${digitos}@c.us`);
       } else {
         this.logger.error(
           `Error enviando invitación Green-API (${response.status}): ${await response.text()}`,
@@ -330,8 +400,33 @@ export class ContactosEmergenciaService {
     titulo: string,
     descripcionHtml: string,
     token: string | null,
+    modoBotones: 'AMBOS' | 'SOLO_ACEPTAR' | 'SOLO_RECHAZAR' | 'FINALIZADO' = 'FINALIZADO',
   ): string {
     const tokenSeguro = token ? encodeURIComponent(token) : '';
+
+    let botonesHtml = `<span class="badge-ok">Proceso completado · Puedes cerrar esta ventana</span>`;
+
+    if (token && modoBotones === 'AMBOS') {
+      botonesHtml = `
+        <form method="POST" action="../confirmar/${tokenSeguro}">
+          <button type="submit" class="btn">Aceptar y confirmar solicitud</button>
+        </form>
+        <form method="POST" action="../rechazar/${tokenSeguro}">
+          <button type="submit" class="btn-reject">Rechazar (No deseo recibir mensajes)</button>
+        </form>`;
+    } else if (token && modoBotones === 'SOLO_ACEPTAR') {
+      botonesHtml = `
+        <form method="POST" action="../confirmar/${tokenSeguro}">
+          <button type="submit" class="btn">¿Fue un error? Aceptar y confirmar solicitud</button>
+        </form>`;
+    } else if (token && modoBotones === 'SOLO_RECHAZAR') {
+      botonesHtml = `
+        <span class="badge-ok">✅ Contacto verificado · Puedes cerrar esta ventana</span>
+        <form method="POST" action="../rechazar/${tokenSeguro}">
+          <button type="submit" class="btn-reject">Darse de baja / Rechazar</button>
+        </form>`;
+    }
+
     return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -362,16 +457,7 @@ export class ContactosEmergenciaService {
     </header>
     <div class="content">
       <p>${descripcionHtml}</p>
-      ${
-        token
-          ? `<form method="POST" action="../confirmar/${tokenSeguro}">
-               <button type="submit" class="btn">Aceptar y confirmar solicitud</button>
-             </form>
-             <form method="POST" action="../rechazar/${tokenSeguro}">
-               <button type="submit" class="btn-reject">Rechazar (No deseo recibir mensajes)</button>
-             </form>`
-          : `<span class="badge-ok">Proceso completado · Puedes cerrar esta ventana</span>`
-      }
+      ${botonesHtml}
     </div>
   </main>
 </body>

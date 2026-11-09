@@ -27,6 +27,7 @@ export class ContactsPage {
   private readonly api = inject(ContactsService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly viewLeft = new Subject<void>();
+  private readonly VENTANA_48H_MS = 48 * 60 * 60 * 1000;
 
   readonly contactos = signal<ContactoEmergencia[]>([]);
   readonly busqueda = signal('');
@@ -141,6 +142,54 @@ export class ContactsPage {
   cancelarEdicion() {
     this.editando.set(null);
     this.form.reset();
+  }
+
+  /**
+   * Propuesta 3: Verifica si han pasado 48h desde la solicitud para habilitar el reenvío
+   */
+  puedeReenviar(contacto: ContactoEmergencia): boolean {
+    if (this.demo() || contacto.confirmado || !contacto.creadoEn) return false;
+    const creadoMs = new Date(contacto.creadoEn).getTime();
+    if (Number.isNaN(creadoMs)) return false;
+    return Date.now() - creadoMs >= this.VENTANA_48H_MS;
+  }
+
+  horasParaReenviar(contacto: ContactoEmergencia): number {
+    if (!contacto.creadoEn) return 48;
+    const creadoMs = new Date(contacto.creadoEn).getTime();
+    if (Number.isNaN(creadoMs)) return 48;
+    const restante = this.VENTANA_48H_MS - (Date.now() - creadoMs);
+    return Math.max(0, Math.ceil(restante / (60 * 60 * 1000)));
+  }
+
+  reenviarInvitacion(contacto: ContactoEmergencia) {
+    if (this.guardando() || this.eliminando() || this.estado() !== 'ready') return;
+    if (!this.puedeReenviar(contacto) || !('reenviar' in this.api)) return;
+
+    this.guardando.set(true);
+    this.error.set('');
+    this.mensaje.set('');
+
+    this.api
+      .reenviar(contacto.id)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        takeUntil(this.viewLeft),
+        finalize(() => this.guardando.set(false)),
+      )
+      .subscribe({
+        next: res => {
+          this.aplicarContacto(res.contacto);
+          this.mensaje.set(`Se reenvió la solicitud de confirmación por WhatsApp a ${contacto.nombre}.`);
+        },
+        error: (err: unknown) => {
+          if (err instanceof HttpErrorResponse && err.status === 409 && err.error?.message) {
+            this.error.set(String(err.error.message));
+          } else {
+            this.mostrarError(err);
+          }
+        },
+      });
   }
 
   alternarNotificacion(contacto: ContactoEmergencia) {

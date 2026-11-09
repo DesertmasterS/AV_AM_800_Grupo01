@@ -26,7 +26,7 @@ export class ContactosEmergenciaController {
   @UseGuards(AuthGuard)
   async listar(@Req() req: any) {
     const usuarioId = req.user?.id || req.user?.sub;
-    const contactos = await this.contactosService.listar(usuarioId);
+    const contactos = await this.contactosService.listar(Number(usuarioId));
     return { contactos };
   }
 
@@ -34,7 +34,7 @@ export class ContactosEmergenciaController {
   @UseGuards(AuthGuard)
   async crear(@Req() req: any, @Body() dto: CrearContactoDto) {
     const usuarioId = req.user?.id || req.user?.sub;
-    const contacto = await this.contactosService.crear(usuarioId, dto);
+    const contacto = await this.contactosService.crear(Number(usuarioId), dto);
     return { contacto };
   }
 
@@ -46,7 +46,19 @@ export class ContactosEmergenciaController {
     @Body() dto: ActualizarContactoDto,
   ) {
     const usuarioId = req.user?.id || req.user?.sub;
-    const contacto = await this.contactosService.actualizar(id, usuarioId, dto);
+    const contacto = await this.contactosService.actualizar(id, Number(usuarioId), dto);
+    return { contacto };
+  }
+
+  @Post(':id/reenviar')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async reenviarSolicitud(
+    @Req() req: any,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    const usuarioId = req.user?.id || req.user?.sub;
+    const contacto = await this.contactosService.reenviarSolicitud(id, Number(usuarioId));
     return { contacto };
   }
 
@@ -55,7 +67,7 @@ export class ContactosEmergenciaController {
   @HttpCode(HttpStatus.OK)
   async eliminar(@Req() req: any, @Param('id', ParseIntPipe) id: number) {
     const usuarioId = req.user?.id || req.user?.sub;
-    await this.contactosService.eliminar(id, usuarioId);
+    await this.contactosService.eliminar(id, Number(usuarioId));
   }
 
   // 1. Pantalla web que ve el contacto al abrir el link desde su WhatsApp

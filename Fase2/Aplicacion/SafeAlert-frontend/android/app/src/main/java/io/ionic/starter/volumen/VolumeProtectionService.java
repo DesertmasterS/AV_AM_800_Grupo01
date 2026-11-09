@@ -101,14 +101,19 @@ public class VolumeProtectionService extends Service {
         if (STOP_ACTIVE_ALERT.equals(intent.getAction())) {
             stopActiveAlertOnServer(); return START_NOT_STICKY;
         }
-        if (session != null) return START_NOT_STICKY;
+        if (session != null) {
+            if (SINGLE.equals(intent.getAction())) {
+                trigger();
+            }
+            return START_NOT_STICKY;
+        }
         try {
             session = SosSession.read(this);
             persistent = START.equals(intent.getAction());
             if (persistent && !VolumeAccessibilityService.connected) {
                 finish("Habilita primero el servicio de accesibilidad de SafeAlert."); return START_NOT_STICKY;
             }
-            endsAt = Math.min(session.expiresAt, System.currentTimeMillis() + (persistent ? 2 * 60 * 60 * 1000L : 60000L));
+            endsAt = Math.min(session.expiresAt, System.currentTimeMillis() + (persistent ? 2 * 60 * 60 * 1000L : 30 * 60 * 1000L));
             locationEnabled = SosLocationCapture.hasPermission(this);
             phase = "monitoring";
             Notification notification = notification("Protección por volumen iniciada.");
@@ -123,9 +128,12 @@ public class VolumeProtectionService extends Service {
                 }
             } else startForeground(NOTICE, notification);
             auth.registerOnSharedPreferenceChangeListener(authListener);
-            handler.postDelayed(() -> finish("Terminó la sesión por volumen. Actívala nuevamente desde Ajustes."), endsAt - System.currentTimeMillis());
-            message("Protección por volumen activa hasta 2 horas." + (locationEnabled ? " Se intentará ubicar cada SOS." : " Esta sesión enviará SOS sin ubicación. Revisa los permisos y vuelve a activarla para incluir ubicación."));
-            if (!persistent) trigger();
+            if (persistent) {
+                handler.postDelayed(() -> finish("Terminó la sesión por volumen. Actívala nuevamente desde Ajustes."), endsAt - System.currentTimeMillis());
+                message("Protección por volumen activa hasta 2 horas." + (locationEnabled ? " Se intentará ubicar cada SOS." : " Esta sesión enviará SOS sin ubicación. Revisa los permisos y vuelve a activarla para incluir ubicación."));
+            } else {
+                trigger();
+            }
         } catch (Exception ignored) {
             finish("No se pudo iniciar la protección por volumen. Revisa tu sesión y los permisos desde SafeAlert.");
         }
@@ -199,10 +207,11 @@ public class VolumeProtectionService extends Service {
             handler.post(() -> {
                 if (ok) {
                     activeAlertId = -1;
+                    auth.edit().putString("stopped_alert_id", idToStop + ":" + System.currentTimeMillis()).apply();
                     String msg = "Alerta #" + idToStop + " detenida y finalizada correctamente.";
                     message(msg);
                     Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
-                    if (!persistent) { stopForeground(false); stopSelf(); }
+                    if (!persistent) { stopForeground(true); stopSelf(); }
                 } else {
                     Toast.makeText(this, "No se pudo detener la alerta #" + idToStop, Toast.LENGTH_LONG).show();
                 }
