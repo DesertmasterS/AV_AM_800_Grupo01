@@ -43,8 +43,9 @@ export class ApiService {
   readonly cambiosAlerta$ = this.alertaActualizadaSubject.asObservable();
 
   probarConexion(): Observable<string> {
-    return this.http.get(this.apiUrl, { responseType: 'text' });
-  }
+  const url = this.apiUrl === '/api' ? '/api/' : this.apiUrl;
+  return this.http.get(url, { responseType: 'text' });
+}
 
   enviarAlerta(datos?: {
     latitud?: number;
