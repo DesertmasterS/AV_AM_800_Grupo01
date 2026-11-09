@@ -138,15 +138,15 @@ export class AlertasService {
 
     let alerta: Alerta | null = null;
 
-    // Si es un código UUID (eventoId)
-    if (/^[a-zA-Z0-9-]{10,64}$/.test(codigoLimpio)) {
+    // 1. Acceso por código UUID criptográfico (eventoId de al menos 16 caracteres)
+    if (/^[a-zA-Z0-9-]{16,64}$/.test(codigoLimpio)) {
       alerta = await this.alertaRepo.findOne({
         where: { eventoId: codigoLimpio },
         relations: { usuario: true },
       });
     }
-    // Si es el ID numérico de la alerta (ej. cuando el propio dueño entra desde el Home)
-    else if (/^\d+$/.test(codigoLimpio)) {
+    // 2. Acceso por ID numérico: SOLO permitido si hay sesión activa verificada
+    else if (/^\d+$/.test(codigoLimpio) && usuarioIdSesion) {
       const idNumerico = Number(codigoLimpio);
       const candidata = await this.alertaRepo.findOne({
         where: { id: idNumerico },
@@ -156,16 +156,17 @@ export class AlertasService {
       if (candidata) {
         const creadorId = candidata.usuario?.id;
 
-       
-        if (!usuarioIdSesion || creadorId === usuarioIdSesion) {
+        // Solo si el usuario autenticado es el dueño que generó la alerta
+        if (creadorId && creadorId === usuarioIdSesion) {
           alerta = candidata;
         } else if (creadorId) {
+          // O si el usuario autenticado es un contacto CONFIRMADO del creador
           const miUsuario = await this.usuarioRepo.findOne({ where: { id: usuarioIdSesion } });
           const misDigitos = this.formatearDigitosChile(miUsuario?.telefono);
-          const contactos = await this.contactoRepo.find({
-            where: { usuario: { id: creadorId } },
+          const contactosConfirmados = await this.contactoRepo.find({
+            where: { usuario: { id: creadorId }, confirmado: true, rechazado: false },
           });
-          if (contactos.some((c) => this.formatearDigitosChile(c.telefono) === misDigitos)) {
+          if (contactosConfirmados.some((c) => this.formatearDigitosChile(c.telefono) === misDigitos)) {
             alerta = candidata;
           }
         }
@@ -195,10 +196,6 @@ export class AlertasService {
     };
   }
 
-  /**
-   * Lista únicamente las alertas de usuarios que tienen al 
-   * usuario actual registrado como contacto de confianza
-   */
   async obtenerAlertasCompartidasConmigo(usuarioId?: number) {
     this.validarUsuarioId(usuarioId);
     const miUsuario = await this.usuarioRepo.findOne({ where: { id: usuarioId } });
@@ -215,6 +212,8 @@ export class AlertasService {
         .where("RIGHT(REGEXP_REPLACE(contacto.telefono, '\\D', '', 'g'), 8) = :ultimosOcho", {
           ultimosOcho,
         })
+        .andWhere('contacto.confirmado = true')
+        .andWhere('contacto.rechazado = false')
         .getMany();
 
       idsConfiaron = coincidencias.map((c) => c.usuario.id);
@@ -263,11 +262,11 @@ export class AlertasService {
   ): Promise<void> {
     try {
       const contactos = await this.contactoRepo.find({
-        where: { usuario: { id: usuario.id } },
+        where: { usuario: { id: usuario.id }, confirmado: true },
       });
 
       if (!contactos.length) {
-        this.logger.warn(`El usuario ${usuario.id} no tiene contactos de emergencia registrados.`);
+        this.logger.warn(`El usuario ${usuario.id} no tiene contactos de emergencia confirmados.`);
         return;
       }
 
