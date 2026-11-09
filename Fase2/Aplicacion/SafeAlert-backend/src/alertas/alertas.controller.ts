@@ -12,22 +12,25 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import type { Request } from 'express';
+import { JwtService } from '@nestjs/jwt';
 import { AlertasService } from './alertas.service';
 import { CrearAlertaDto } from './dto/crear-alerta.dto';
-import { AuthGuard } from '../auth/auth.guard';
 import { ActualizarUbicacionDto } from './dto/actualizar-ubicacion.dto';
-
+import { AuthGuard } from '../auth/auth.guard';
 
 @Controller('alerta')
 export class AlertasController {
-  constructor(private readonly alertasService: AlertasService) {}
+  constructor(
+    private readonly alertasService: AlertasService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   @Post()
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.CREATED)
   async registrarAlerta(@Body() dto: CrearAlertaDto, @Req() req: Request) {
     const usuarioId = (req as any).user?.id || (req as any).user?.sub;
-    return await this.alertasService.crearAlerta(dto, usuarioId);
+    return await this.alertasService.crearAlerta(dto, Number(usuarioId));
   }
 
   @Get('activa')
@@ -35,7 +38,7 @@ export class AlertasController {
   @HttpCode(HttpStatus.OK)
   async obtenerAlertaActiva(@Req() req: Request) {
     const usuarioId = (req as any).user?.id || (req as any).user?.sub;
-    return await this.alertasService.obtenerAlertaActiva(usuarioId);
+    return await this.alertasService.obtenerAlertaActiva(Number(usuarioId));
   }
 
   @Get('compartidas')
@@ -43,7 +46,7 @@ export class AlertasController {
   @HttpCode(HttpStatus.OK)
   async obtenerCompartidas(@Req() req: Request) {
     const usuarioId = (req as any).user?.id || (req as any).user?.sub;
-    return await this.alertasService.obtenerAlertasCompartidasConmigo(usuarioId);
+    return await this.alertasService.obtenerAlertasCompartidasConmigo(Number(usuarioId));
   }
 
   @Patch(':id/detener')
@@ -54,10 +57,9 @@ export class AlertasController {
     @Req() req: Request,
   ) {
     const usuarioId = (req as any).user?.id || (req as any).user?.sub;
-    return await this.alertasService.detenerAlerta(id, usuarioId);
+    return await this.alertasService.detenerAlerta(id, Number(usuarioId));
   }
 
-  // Ruta POST equivalente para compatibilidad con HttpURLConnection de Android nativo
   @Post(':id/detener')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.OK)
@@ -66,7 +68,7 @@ export class AlertasController {
     @Req() req: Request,
   ) {
     const usuarioId = (req as any).user?.id || (req as any).user?.sub;
-    return await this.alertasService.detenerAlerta(id, usuarioId);
+    return await this.alertasService.detenerAlerta(id, Number(usuarioId));
   }
 
   @Patch(':id/ubicacion')
@@ -82,7 +84,7 @@ export class AlertasController {
       id,
       dto.latitud,
       dto.longitud,
-      usuarioId,
+      Number(usuarioId),
     );
   }
 
@@ -91,13 +93,28 @@ export class AlertasController {
   @HttpCode(HttpStatus.OK)
   async obtenerHistorial(@Req() req: Request) {
     const usuarioId = (req as any).user?.id || (req as any).user?.sub;
-    return await this.alertasService.obtenerHistorial(usuarioId);
+    return await this.alertasService.obtenerHistorial(Number(usuarioId));
   }
 
-  // Acceso por código UUID secreto (eventoId) enviado en el enlace de WhatsApp
+  // Lee la cookie safealert_session (si existe) para reconocer al dueño de la alerta #103
   @Get('publica/:codigo')
   @HttpCode(HttpStatus.OK)
-  async obtenerAlertaPublica(@Param('codigo') codigo: string) {
-    return await this.alertasService.obtenerAlertaPorCodigo(codigo);
+  async obtenerAlertaPublica(@Param('codigo') codigo: string, @Req() req: Request) {
+    let usuarioIdSesion: number | undefined;
+    const token =
+      req.cookies?.['safealert_session'] ||
+      req.headers.authorization?.split(' ')[1];
+
+    if (token) {
+      try {
+        const payload = await this.jwtService.verifyAsync(token);
+        const sub = payload?.id ?? payload?.sub;
+        if (sub) usuarioIdSesion = Number(sub);
+      } catch {
+        // Sin sesión válida: solo podrá entrar si envía el UUID eventoId completo
+      }
+    }
+
+    return await this.alertasService.obtenerAlertaPorCodigo(codigo, usuarioIdSesion);
   }
 }

@@ -109,7 +109,7 @@ export class ApiService {
   obtenerAlertaEnVivo(codigo: string | number): Observable<AlertaPublica> {
     return this.http.get<AlertaPublica>(
       `${this.apiUrl}/alerta/publica/${encodeURIComponent(String(codigo))}`,
-      { withCredentials: true }, 
+      { withCredentials: true },
     );
   }
 

@@ -130,7 +130,7 @@ export class AlertasService {
     };
   }
 
-  async obtenerAlertaPorCodigo(codigo: string, usuarioIdSesion?: number) {
+   async obtenerAlertaPorCodigo(codigo: string, usuarioIdSesion?: number) {
     const codigoLimpio = codigo?.trim();
     if (!codigoLimpio || codigoLimpio === 'undefined' || codigoLimpio === 'null') {
       throw new BadRequestException('Código de seguimiento inválido');
@@ -138,14 +138,14 @@ export class AlertasService {
 
     let alerta: Alerta | null = null;
 
-    // 1. Acceso por código UUID criptográfico (eventoId de al menos 16 caracteres)
+    // 1. Si viene el código UUID (eventoId)
     if (/^[a-zA-Z0-9-]{16,64}$/.test(codigoLimpio)) {
       alerta = await this.alertaRepo.findOne({
         where: { eventoId: codigoLimpio },
         relations: { usuario: true },
       });
     }
-    // 2. Acceso por ID numérico: SOLO permitido si hay sesión activa verificada
+    // 2. Si viene el ID numérico (ej. /alerta/publica/103 desde el botón del Home)
     else if (/^\d+$/.test(codigoLimpio) && usuarioIdSesion) {
       const idNumerico = Number(codigoLimpio);
       const candidata = await this.alertaRepo.findOne({
@@ -154,19 +154,19 @@ export class AlertasService {
       });
 
       if (candidata) {
-        const creadorId = candidata.usuario?.id;
+        const creadorId = Number(candidata.usuario?.id);
 
-        // Solo si el usuario autenticado es el dueño que generó la alerta
-        if (creadorId && creadorId === usuarioIdSesion) {
+        // Si el usuario con sesión iniciada es el dueño que generó la alerta #103
+        if (creadorId > 0 && creadorId === Number(usuarioIdSesion)) {
           alerta = candidata;
-        } else if (creadorId) {
-          // O si el usuario autenticado es un contacto CONFIRMADO del creador
-          const miUsuario = await this.usuarioRepo.findOne({ where: { id: usuarioIdSesion } });
+        } else if (creadorId > 0) {
+          // O si es un contacto de confianza del dueño
+          const miUsuario = await this.usuarioRepo.findOne({ where: { id: Number(usuarioIdSesion) } });
           const misDigitos = this.formatearDigitosChile(miUsuario?.telefono);
-          const contactosConfirmados = await this.contactoRepo.find({
-            where: { usuario: { id: creadorId }, confirmado: true, rechazado: false },
+          const contactos = await this.contactoRepo.find({
+            where: { usuario: { id: creadorId } },
           });
-          if (contactosConfirmados.some((c) => this.formatearDigitosChile(c.telefono) === misDigitos)) {
+          if (contactos.some((c) => this.formatearDigitosChile(c.telefono) === misDigitos)) {
             alerta = candidata;
           }
         }
@@ -180,7 +180,9 @@ export class AlertasService {
     const nombreSeguro =
       (alerta.usuario as { nombre?: string } | null)?.nombre?.trim() || 'Usuario SafeAlert';
 
-    const esDueno = Boolean(usuarioIdSesion && alerta.usuario?.id === usuarioIdSesion);
+    const esDueno = Boolean(
+      usuarioIdSesion && Number(alerta.usuario?.id) === Number(usuarioIdSesion),
+    );
     const mostrarCoordenadas = alerta.estado === 'ACTIVA' || esDueno;
 
     return {
