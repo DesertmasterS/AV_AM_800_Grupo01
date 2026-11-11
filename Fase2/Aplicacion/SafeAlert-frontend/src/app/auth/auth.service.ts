@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { catchError, finalize, of, tap, timeout } from 'rxjs';
+import { WidgetService } from '../settings/widget/widget.service';
 import { Preferences } from '@capacitor/preferences';
 import { environment } from '../../environments/environment';
 import { LoginRequest, RegistroRequest, SesionResponse, UsuarioSesion } from './auth.models';
@@ -12,6 +13,7 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly movimiento = inject(MotionSosService);
   private readonly volumen = inject(VolumeSosService);
+  private readonly widget = inject(WidgetService);
   private nativeToken: string | null = null;
   private sincronizacionNativa: Promise<void> = Promise.resolve();
   private readonly url = environment.apiUrl + '/auth';
@@ -106,6 +108,7 @@ export class AuthService {
       key: 'sos_endpoint',
       value: `${environment.apiUrl}/alerta`, 
     });
+    this.widget.refrescar();
   }
 
   private async limpiarSosNativo() {
@@ -115,6 +118,7 @@ export class AuthService {
       await this.volumen.detener().catch(() => undefined);
       await Preferences.remove({ key: 'jwt_token' });
       await Preferences.remove({ key: 'usuario_id' });
+      this.widget.refrescar();
     }).catch(() => undefined);
     await this.sincronizacionNativa;
   }

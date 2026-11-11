@@ -1,0 +1,16 @@
+<ion-content>
+  <main class="widget-action">
+    <p class="eyebrow">SAFEALERT · ACCESO RÁPIDO</p>
+    <h1>{{ active() ? 'Tu alerta está activa' : '¿Necesitas ayuda?' }}</h1>
+    <p>Al confirmar, se registrará un SOS y se intentará avisar por WhatsApp a tus contactos habilitados, incluyendo la ubicación y batería disponibles.</p>
+    <div class="state" role="status">{{ checking() ? 'Consultando tu alerta…' : active() ? 'Alerta #' + active()!.id + ' activa' : 'Listo para activar tu red de apoyo' }}</div>
+    @if (!auth.usuario() && !auth.verificando()) {
+      <p>Inicia sesión para enviar una alerta asociada a tu cuenta.</p><a class="link" routerLink="/login">Iniciar sesión</a>
+    } @else if (!active()) {
+      <button class="sos" (click)="enviar()" [disabled]="busy() || checking() || auth.verificando()"><strong>S.O.S</strong><span>{{ busy() ? 'Enviando…' : 'Enviar alerta ahora' }}</span></button>
+    }
+    @if (message()) { <p class="message" [class.error]="error()" role="status">{{ message() }}</p> }
+    @if (!busy()) { <a class="link" routerLink="/home">{{ active() ? 'Ver o detener mi alerta' : 'Volver al inicio sin enviar' }}</a> }
+    <p class="note">Solo puedes tener una alerta activa a la vez.</p>
+  </main>
+</ion-content>

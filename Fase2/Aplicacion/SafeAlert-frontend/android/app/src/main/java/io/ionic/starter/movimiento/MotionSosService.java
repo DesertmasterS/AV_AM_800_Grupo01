@@ -3,6 +3,8 @@ package io.ionic.starter.movimiento;
 import io.ionic.starter.sos.SosLocationPolicy;
 import io.ionic.starter.sos.SosLocationCapture;
 import io.ionic.starter.sos.SosAlertClient;
+import io.ionic.starter.widget.SosWidgetProvider;
+import io.ionic.starter.sos.SosBattery;
 
 import android.app.*;
 import android.content.*;
@@ -36,6 +38,7 @@ public class MotionSosService extends Service implements SensorEventListener {
     private final SosAlertClient client = new SosAlertClient("MOVIMIENTO");
     private final float[] gravity = new float[3];
     private boolean gravityReady;
+    private long lastDiagnosticSample;
     private boolean locationEnabled;
     private SosLocationCapture locationCapture;
     private Double eventLatitude, eventLongitude;
@@ -87,7 +90,7 @@ public class MotionSosService extends Service implements SensorEventListener {
                 handler.removeCallbacks(countdown);
                 locationCapture.cancel();
                 deadline = 0;
-                detector.mute(SystemClock.elapsedRealtime());
+                detector.reset();
                 phase = "monitoring";
                 message("Prealerta cancelada. El monitoreo sigue activo.");
                 updateNotification();
@@ -118,13 +121,16 @@ public class MotionSosService extends Service implements SensorEventListener {
                         Build.VERSION.SDK_INT >= 34 ? ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE : 0);
                 }
             } else startForeground(NOTIFICATION_ID, notification);
-            sensor = sensors.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION, true);
-            if (sensor == null) sensor = sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER, true);
-            if (sensor == null) sensor = sensors.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
+            sensor = sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER, true);
+            if (sensor == null) sensor = sensors.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION, true);
+            // Preferir el sensor físico al virtual cuando no existe una variante wake-up.
+            // La gravedad se filtra en onSensorChanged también con la pantalla apagada.
             if (sensor == null) sensor = sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            if (sensor == null) sensor = sensors.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
             if (sensor == null || !sensors.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME)) {
                 finish("No se pudo iniciar el acelerómetro."); return START_NOT_STICKY;
             }
+            if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) android.util.Log.d("SafeAlertDiagnostics", "motion sensor type=" + sensor.getType() + " wakeup=" + sensor.isWakeUpSensor());
             PowerManager power = (PowerManager) getSystemService(POWER_SERVICE);
             wakeLock = power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SafeAlert:MotionSession");
             wakeLock.acquire(sessionEndsAt - System.currentTimeMillis() + 30000L);
@@ -142,6 +148,13 @@ public class MotionSosService extends Service implements SensorEventListener {
     }
 
     @Override public void onSensorChanged(SensorEvent event) {
+        long diagnosticTime = SystemClock.elapsedRealtime();
+        if (((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) && diagnosticTime - lastDiagnosticSample >= 2000) {
+            lastDiagnosticSample = diagnosticTime;
+            PowerManager power = (PowerManager) getSystemService(POWER_SERVICE);
+            android.util.Log.d("SafeAlertDiagnostics", "motion sample interactive=" + power.isInteractive()
+                + " phase=" + phase + " running=" + running);
+        }
         if (!running || stopping || !"monitoring".equals(phase)) return;
         double x = event.values[0], y = event.values[1], z = event.values[2];
         if (sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
@@ -154,6 +167,7 @@ public class MotionSosService extends Service implements SensorEventListener {
             x -= gravity[0]; y -= gravity[1]; z -= gravity[2];
         }
         if (detector.sample(x, y, z, SystemClock.elapsedRealtime())) {
+            if (((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0)) android.util.Log.d("SafeAlertDiagnostics", "motion gesture detected");
             if (locationEnabled && SosLocationCapture.hasPermission(this)) locationCapture.start();
             phase = "countdown";
             deadline = System.currentTimeMillis() + 10000;
@@ -228,13 +242,15 @@ public class MotionSosService extends Service implements SensorEventListener {
         Double sendingLatitude = eventLatitude, sendingLongitude = eventLongitude;
         network.execute(() -> {
             if (stopping || !sendingId.equals(eventId)) return;
-            SosAlertClient.Result result = client.send(endpoint, token, sendingId, sendingLatitude, sendingLongitude);
+            SosAlertClient.Result result = client.send(endpoint, token, sendingId, sendingLatitude, sendingLongitude, SosBattery.read(this));
+            if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) android.util.Log.d("SafeAlertDiagnostics", "motion HTTP status=" + result.status + " confirmed=" + result.confirmed());
             handler.post(() -> {
                 if (stopping || !sendingId.equals(eventId)) return;
                 if (result.confirmed()) {
+                    SosWidgetProvider.refresh(this);
                     clearPending(); phase = "monitoring";
                     activeAlertId = result.alertId;
-                    detector.mute(SystemClock.elapsedRealtime());
+                    detector.reset();
                     if (result.alreadyActive) {
                         message("Ya tienes la Alerta #" + result.alertId + " activa. ¿Deseas detenerla? Toca 'Detener alerta' aquí o en la app.");
                     } else {
@@ -264,6 +280,7 @@ public class MotionSosService extends Service implements SensorEventListener {
         updateNotification();
         network.execute(() -> {
             boolean ok = client.stopAlert(endpoint, token, idToStop);
+            if (ok) SosWidgetProvider.refresh(this);
             handler.post(() -> {
                 if (ok) {
                     activeAlertId = -1;

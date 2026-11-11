@@ -1,6 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, Subject, tap } from 'rxjs';
+import { Observable, Subject, tap, defer, switchMap } from 'rxjs';
+import { WidgetService } from '../settings/widget/widget.service';
+import { BatteryService } from './battery.service';
 import { Preferences } from '@capacitor/preferences';
 import { environment } from '../../environments/environment';
 
@@ -36,6 +38,8 @@ export interface AlertaPublica {
 export class ApiService {
   private readonly apiUrl = environment.apiUrl;
   private readonly http = inject(HttpClient);
+  private readonly widget = inject(WidgetService);
+  private readonly battery = inject(BatteryService);
   private watchId: number | null = null;
 
   // Emite un evento cada vez que se crea o detiene una alerta dentro de la app
@@ -53,16 +57,20 @@ export class ApiService {
     origen?: 'BOTON' | 'MOVIMIENTO' | 'VOLUMEN';
     eventoId?: string;
   }): Observable<AlertaRegistrada> {
-    return this.http
-      .post<AlertaRegistrada>(`${this.apiUrl}/alerta`, datos ?? {}, {
-        withCredentials: true,
-      })
+    return defer(() => this.battery.readPercentage()).pipe(
+      switchMap(bateriaPorcentaje => this.http.post<AlertaRegistrada>(
+        `${this.apiUrl}/alerta`,
+        { ...datos, ...(bateriaPorcentaje === undefined ? {} : { bateriaPorcentaje }) },
+        { withCredentials: true },
+      )),
+    )
       .pipe(
         tap((res) => {
           const alertaId = res?.id ?? res?.alertaId;
           if (alertaId) {
             this.iniciarTransmisionGpsEnVivo(alertaId);
           }
+          this.widget.refrescar();
           this.alertaActualizadaSubject.next();
         }),
       );
@@ -85,6 +93,7 @@ export class ApiService {
       .pipe(
         tap(() => {
           this.detenerTransmisionGps();
+          this.widget.refrescar();
           this.alertaActualizadaSubject.next();
           void Preferences.set({
             key: 'stopped_alert_id',

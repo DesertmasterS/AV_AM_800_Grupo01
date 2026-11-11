@@ -10,6 +10,8 @@ import androidx.core.content.ContextCompat;
 import io.ionic.starter.MainActivity;
 import io.ionic.starter.R;
 import io.ionic.starter.sos.SosAlertClient;
+import io.ionic.starter.widget.SosWidgetProvider;
+import io.ionic.starter.sos.SosBattery;
 import io.ionic.starter.sos.SosLocationCapture;
 import io.ionic.starter.sos.SosSession;
 import java.util.UUID;
@@ -144,6 +146,7 @@ public class VolumeProtectionService extends Service {
         if (stopping || busy || session == null) return;
         if (!session.token.equals(auth.getString("jwt_token", null))) { finish("Tu sesión cambió. Inicia sesión nuevamente."); return; }
         busy = true;
+        if (((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0)) android.util.Log.d("SafeAlertDiagnostics", "volume gesture detected");
         PowerManager power = (PowerManager) getSystemService(POWER_SERVICE);
         wakeLock = power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SafeAlert:VolumeSOS");
         wakeLock.acquire(45000L);
@@ -171,13 +174,15 @@ public class VolumeProtectionService extends Service {
         message(latitude == null ? "Enviando SOS sin ubicación disponible…" : "Enviando SOS con ubicación del dispositivo…");
         network.execute(() -> {
             if (stopping) return;
-            SosAlertClient.Result result = client.send(session.endpoint, session.token, eventId, latitude, longitude);
+            SosAlertClient.Result result = client.send(session.endpoint, session.token, eventId, latitude, longitude, SosBattery.read(this));
+            if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) android.util.Log.d("SafeAlertDiagnostics", "volume HTTP status=" + result.status + " confirmed=" + result.confirmed());
             handler.post(() -> {
                 if (stopping) return;
                 busy = false;
                 if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
                 String text;
                 if (result.confirmed()) {
+                    SosWidgetProvider.refresh(this);
                     activeAlertId = result.alertId;
                     if (result.alreadyActive) {
                         text = "Ya tienes la Alerta #" + result.alertId + " activa. ¿Deseas detenerla? Usa el botón 'Detener alerta' en la notificación o en la app.";
@@ -204,6 +209,7 @@ public class VolumeProtectionService extends Service {
         message("Deteniendo alerta #" + idToStop + "…");
         network.execute(() -> {
             boolean ok = client.stopAlert(session.endpoint, session.token, idToStop);
+            if (ok) SosWidgetProvider.refresh(this);
             handler.post(() -> {
                 if (ok) {
                     activeAlertId = -1;

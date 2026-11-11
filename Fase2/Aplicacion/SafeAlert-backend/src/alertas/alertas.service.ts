@@ -76,7 +76,7 @@ export class AlertasService {
       const guardada = await this.alertaRepo.save(nuevaAlerta);
 
       // Notificar por WhatsApp vía Green-API (sin bloquear si falla la red externa)
-      await this.notificarContactosEmergencia(usuario, guardada, origen);
+      await this.notificarContactosEmergencia(usuario, guardada, origen, dto.bateriaPorcentaje);
 
       return this.respuesta(guardada, usuarioId, false);
     } catch (error: unknown) {
@@ -265,6 +265,7 @@ export class AlertasService {
     usuario: Usuario,
     alerta: Alerta,
     origen: OrigenAlerta,
+    bateriaPorcentaje?: number,
   ): Promise<void> {
     try {
       const contactos = await this.contactoRepo.find({
@@ -300,6 +301,7 @@ export class AlertasService {
             alerta.latitud,
             alerta.longitud,
             origen,
+            bateriaPorcentaje,
           ),
         ),
       );
@@ -319,6 +321,7 @@ export class AlertasService {
     latitud: number | null,
     longitud: number | null,
     origen: OrigenAlerta,
+    bateriaPorcentaje?: number,
   ): Promise<void> {
     const idInstance = process.env.GREEN_API_ID_INSTANCE;
     const apiTokenInstance = process.env.GREEN_API_TOKEN_INSTANCE;
@@ -349,11 +352,14 @@ export class AlertasService {
 
     const fechaHora = new Date().toLocaleString('es-CL', { timeZone: 'America/Santiago' });
 
+    const bateriaTexto = bateriaPorcentaje == null ? 'No disponible' : `${bateriaPorcentaje}%`;
+
     const mensaje =
       `🚨 *ALERTA S.O.S - SafeAlert* 🚨\n\n` +
       `Hola *${nombreContacto}*, *${nombreUsuario}* ha activado una alerta de emergencia.\n\n` +
       `🛰️ *Mapa en TIEMPO REAL (Modo Acompañante):*\n${linkModoAcompanante}\n\n` +
       `📍 *Ubicación Google Maps:*\n${ubicacionTexto}\n\n` +
+      `🔋 *Batería al enviar:* ${bateriaTexto}\n\n` +
       `⚡ *Método:* ${origen} | 🕒 *Hora:* ${fechaHora}\n\n` +
       `_Abre el enlace del Modo Acompañante para seguir su recorrido en vivo._`;
 

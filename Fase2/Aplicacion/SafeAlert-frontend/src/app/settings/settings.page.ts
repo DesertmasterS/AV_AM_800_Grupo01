@@ -1,6 +1,7 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonicModule } from '@ionic/angular/lazy';
+import { WidgetService } from './widget/widget.service';
 import { AuthService } from '../auth/auth.service';
 import { MotionSosService } from './movimiento/motion-sos.service';
 import { VolumeSosService } from './volumen/volume-sos.service';
@@ -11,6 +12,8 @@ import { VolumeSosService } from './volumen/volume-sos.service';
   templateUrl: './settings.page.html', styleUrls: ['./settings.page.scss'],
 })
 export class SettingsPage {
+  readonly widget = inject(WidgetService);
+  async agregarWidget() { await this.operar(() => this.widget.agregar()); }
   readonly auth = inject(AuthService);
   readonly motion = inject(MotionSosService);
   readonly volumen = inject(VolumeSosService);

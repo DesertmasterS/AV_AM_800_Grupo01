@@ -5,4 +5,6 @@
     <string name="package_name">io.ionic.starter</string>
     <string name="custom_url_scheme">io.ionic.starter</string>
     <string name="accessibility_service_description">Observa tres pulsaciones rápidas del mismo botón de volumen durante una sesión activada desde SafeAlert, incluso con la pantalla bloqueada. No lee el contenido de las pantallas.</string>
+    <string name="sos_widget_name">SafeAlert · Emergencia</string>
+    <string name="sos_widget_description">Botón SOS y último estado consultado de tu alerta.</string>
 </resources>

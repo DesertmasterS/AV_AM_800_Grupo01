@@ -1,6 +1,15 @@
 <ion-content>
   <main class="page-wrap">
     <header class="page-heading"><p class="eyebrow">TU SEGURIDAD, A TU MANERA</p><h1>Ajustes de seguridad</h1><p>Decide cómo quieres activar tu red de apoyo.</p></header>
+    <section class="panel motion-card widget-card" aria-labelledby="widget-title">
+      <div class="motion-heading"><span class="motion-icon"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon></span><div><p class="eyebrow">AYUDA A UN TOQUE</p><h2 id="widget-title">Widget de emergencia</h2></div><span class="status">Android</span></div>
+      <p class="intro">Añade el botón S.O.S y el último estado consultado de tu alerta a la pantalla de inicio. Al pulsarlo, SafeAlert se abre para que confirmes el envío.</p>
+      <div class="widget-preview" aria-hidden="true"><div class="widget-preview-heading"><strong>◇ SAFEALERT</strong><small class="widget-preview-refresh"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M17.65,6.35C16.2,4.9 14.21,4 12,4c-4.42,0 -7.99,3.58 -7.99,8s3.57,8 7.99,8c3.73,0 6.84,-2.55 7.73,-6h-2.08c-0.82,2.33 -3.04,4 -5.65,4c-3.31,0 -6,-2.69 -6,-6s2.69,-6 6,-6c1.66,0 3.14,0.69 4.22,1.78L13,11h7V4z" /></svg></small></div><div class="widget-preview-content"><div><em>● TU ALERTA</em><span>Sin alerta activa</span><small>Última consulta</small></div><b>S.O.S</b></div></div>
+      <button class="activate" (click)="agregarWidget()" [disabled]="ocupado() || !widget.disponible">Agregar widget a la pantalla de inicio</button>
+      @if (!widget.disponible) { <p class="info">Disponible desde SafeAlert instalada en Android.</p> }
+      @if (widget.mensaje()) { <p class="info" role="status">{{ widget.mensaje() }}</p> }
+      <p class="footnote">No requiere permisos adicionales. El estado indica la última consulta; puedes actualizarlo desde el widget. La ubicación usa el permiso de la app. Para usarlo debes acceder a tu pantalla de inicio.</p>
+    </section>
     <section class="panel motion-card" aria-labelledby="motion-title">
       <div class="motion-heading"><span class="motion-icon"><ion-icon name="radio-outline" aria-hidden="true"></ion-icon></span><div><p class="eyebrow">PROTECCIÓN EN ANDROID</p><h2 id="motion-title">Detección por movimiento</h2></div><span class="status" [class.active]="motion.estado().active">{{ motion.estado().active ? 'Activa' : 'Desactivada' }}</span></div>
       <p class="intro">Activa una sesión de protección para detectar varias sacudidas fuertes, incluso mientras usas otra app o bloqueas el teléfono.</p>
@@ -27,7 +36,7 @@
         <div><p class="eyebrow">UN ATAJO CUANDO LO NECESITAS</p><h2 id="volume-title">S.O.S. con botones de volumen</h2></div>
         <span class="status" [class.active]="volumen.lista()">{{ volumen.lista() ? 'Activa' : volumen.estado().active ? 'Revisar permisos' : 'Desactivada' }}</span>
       </div>
-      <p class="intro">Presiona tres veces el mismo botón de volumen en 2 segundos. Con SafeAlert abierta funciona sin activar una sesión; para usarlo desde otra app o con el teléfono bloqueado, configura los permisos y activa la protección aquí. Hay una pausa de 30 segundos entre activaciones para evitar alertas duplicadas.</p>
+      <p class="intro">Presiona tres veces el mismo botón de volumen en 2 segundos. Con SafeAlert abierta funciona sin activar una sesión; para usarlo desde otra app o con el teléfono bloqueado, configura los permisos y activa la protección aquí. No hay espera adicional entre activaciones; solo puedes tener una alerta activa a la vez.</p>
       @if (!volumen.disponible) { <p class="info" role="status">Estos controles necesitan SafeAlert instalada en Android. El navegador no puede habilitar los botones físicos en segundo plano.</p> }
       <div class="permission-grid">
         <article class="permission-card">

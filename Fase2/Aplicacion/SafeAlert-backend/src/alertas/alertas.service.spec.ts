@@ -3,6 +3,7 @@ import { jest } from '@jest/globals';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AlertasService } from './alertas.service';
 import { Alerta } from '../database/entities/alerta.entity';
+import { ContactoEmergencia } from '../database/entities/contacto-emergencia.entity';
 import { Usuario } from '../database/entities/usuario.entity';
 import { CrearAlertaDto, OrigenAlerta } from './dto/crear-alerta.dto';
 import { plainToInstance } from 'class-transformer';
@@ -12,19 +13,44 @@ describe('Alertas por movimiento', () => {
   const eventoId = 'd10f34b5-1678-41cd-9a14-36b686a62745';
   const repo = { findOne: jest.fn(), find: jest.fn(), create: jest.fn(), save: jest.fn() };
   const usuarios = { findOne: jest.fn() };
+  const contactos = { find: jest.fn() };
   let service: AlertasService;
   beforeEach(async () => {
     jest.resetAllMocks();
+    contactos.find.mockResolvedValue([]);
     usuarios.findOne.mockResolvedValue({ id: 7 });
     repo.findOne.mockResolvedValue(null);
     repo.create.mockImplementation(data => data);
     repo.save.mockImplementation(async data => ({ ...data, id: 15, fecha: new Date('2026-10-17T12:00:00Z') }));
     const module = await Test.createTestingModule({
-      providers: [AlertasService, { provide: getRepositoryToken(Alerta), useValue: repo }, { provide: getRepositoryToken(Usuario), useValue: usuarios }],
+      providers: [{ provide: getRepositoryToken(ContactoEmergencia), useValue: contactos }, AlertasService, { provide: getRepositoryToken(Alerta), useValue: repo }, { provide: getRepositoryToken(Usuario), useValue: usuarios }],
     }).compile();
     service = module.get(AlertasService);
   });
 
+  it.each([0, 37, 100, undefined])('acepta batería opcional válida: %s', async bateriaPorcentaje => {
+    expect(await validate(plainToInstance(CrearAlertaDto, { bateriaPorcentaje }))).toHaveLength(0);
+  });
+  it.each([-1, 101, 1.5, '37'])('rechaza batería inválida: %s', async bateriaPorcentaje => {
+    const errors = await validate(plainToInstance(CrearAlertaDto, { bateriaPorcentaje }));
+    expect(errors.some(error => error.property === 'bateriaPorcentaje')).toBe(true);
+  });
+  it.each([0, 37, undefined])('incluye la batería real o su ausencia en WhatsApp: %s', async bateriaPorcentaje => {
+    const previous = { ...process.env };
+    process.env.GREEN_API_ID_INSTANCE = 'test';
+    process.env.GREEN_API_TOKEN_INSTANCE = 'test';
+    contactos.find.mockResolvedValue([{ telefono: '+56912345678', nombre: 'Contacto de prueba' }]);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true } as Response);
+    try {
+      await service.crearAlerta({ bateriaPorcentaje }, 7);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const body = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
+      expect(body.message).toContain('🔋 *Batería al enviar:* ' + (bateriaPorcentaje === undefined ? 'No disponible' : bateriaPorcentaje + '%'));
+    } finally {
+      fetchMock.mockRestore();
+      process.env = previous;
+    }
+  });
   it('registra origen y evento asociados al usuario, sin inventar ubicación', async () => {
     const res = await service.crearAlerta({ origen: OrigenAlerta.MOVIMIENTO, eventoId }, 7);
     expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({
@@ -53,7 +79,7 @@ describe('Alertas por movimiento', () => {
     expect(repo.save).not.toHaveBeenCalled();
   });
   it('resuelve la colisión de dos solicitudes concurrentes', async () => {
-    repo.findOne.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 15, tipo: 'EMERGENCIA_MOVIMIENTO', eventoId });
+    repo.findOne.mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 15, tipo: 'EMERGENCIA_MOVIMIENTO', eventoId });
     repo.save.mockRejectedValue({ driverError: { code: '23505' } });
     const res = await service.crearAlerta({ origen: OrigenAlerta.MOVIMIENTO, eventoId }, 7);
     expect(res).toMatchObject({ id: 15, duplicada: true });

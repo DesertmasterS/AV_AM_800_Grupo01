@@ -15,7 +15,7 @@ La opción de Ajustes activa una sesión nativa de protección por hasta dos hor
 1. El usuario inicia sesión, abre Ajustes, acepta la sesión de protección y pulsa Activar detección.
 2. El plugin solicita ubicación precisa/aproximada (se puede rechazar) y verifica el acelerómetro, las notificaciones, una sesión sincronizada y una URL absoluta HTTPS. Solo las compilaciones de depuración admiten HTTP.
 3. MotionSosService inicia desde la app visible un foreground service de tipo specialUse y, con permiso disponible, location, con una notificación visible. Mantiene un bloqueo parcial de CPU durante la sesión para procesar lecturas con la pantalla apagada.
-4. MotionDetector evalúa aceleración sin gravedad. Valores iniciales: 3 picos sobre 15 m/s² en 2 segundos, separados al menos 250 ms, con descenso entre picos y 30 segundos de enfriamiento.
+4. MotionDetector evalúa aceleración sin gravedad. Valores iniciales: 3 picos sobre 15 m/s² en 2 segundos, separados al menos 250 ms, con descenso entre picos y sin espera adicional de enfriamiento.
 5. Se intenta capturar una ubicación durante la prealerta de 10 segundos: vibración y notificación con Cancelar SOS. También puede cancelarse desde Ajustes. Cancelar conserva el monitoreo y cancela la captura de ubicación; Desactivar detiene ambos.
 6. Al terminar la cuenta regresiva se genera un UUID v4 y se envía el evento con la ubicación disponible desde Java, sin depender de JavaScript activo. Si no hay posición válida, se omiten ambas coordenadas sin esperar más.
 7. La respuesta solo se considera confirmada si el backend devuelve un estado 2xx con id de alerta válido. La notificación distingue registro confirmado de envío pendiente; no afirma que contactos o autoridades recibieron ayuda.
@@ -74,7 +74,7 @@ Solo el evento cuya cuenta regresiva terminó se conserva en preferencias privad
 
 La opción «S.O.S. con botones de volumen» de Ajustes muestra los permisos reales y el estado de accesibilidad. El usuario solicita ubicación y notificaciones desde la app y habilita manualmente SafeAlert en los ajustes de Accesibilidad de Android. La app no activa accesibilidad por su cuenta ni cambia ajustes de seguridad. El servicio no solicita contenido de las ventanas; procesa eventos de botones y su callback de accesibilidad no lee datos de pantalla.
 
-Tres pulsaciones del mismo botón (arriba o abajo) en 2 segundos activan el SOS. Se ignoran las autorrepeticiones de un botón mantenido, se deduplica el mismo KeyEvent recibido por la actividad y accesibilidad, y existe un enfriamiento de 30 segundos. No hay cuenta regresiva cancelable como en movimiento. Mientras se obtiene ubicación o se envía una alerta, se bloquean nuevas activaciones.
+Tres pulsaciones del mismo botón (arriba o abajo) en 2 segundos activan el SOS. Se ignoran las autorrepeticiones de un botón mantenido, se deduplica el mismo KeyEvent recibido por la actividad y accesibilidad, sin una espera adicional de enfriamiento. No hay cuenta regresiva cancelable como en movimiento. Mientras se obtiene ubicación o se envía una alerta, se bloquean nuevas activaciones.
 
 Con la app abierta, MainActivity usa la ruta nativa para iniciar un envío puntual. Para usar los botones desde otra app o con pantalla bloqueada, el usuario activa explícitamente una sesión de hasta dos horas, limitada además por el vencimiento del JWT. VolumeProtectionService inicia specialUse|location desde la actividad visible, con notificación y acción para desactivar. Si Android no permite location, conserva specialUse y advierte que esa sesión no incluirá ubicación. Para incluirla, se revisan los permisos y se vuelve a activar. No se solicita ACCESS_BACKGROUND_LOCATION ni ignorar optimizaciones de batería.
 
@@ -114,3 +114,18 @@ Antes de dar por validado el funcionamiento: probar con pantalla bloqueada, ahor
 - [Tipos de foreground service](https://developer.android.com/develop/background-work/services/fgs/service-types)
 - [Permiso de notificaciones](https://developer.android.com/develop/ui/compose/notifications/notification-permission)
 - [Plugins Android de Capacitor](https://capacitorjs.com/docs/plugins/android)
+
+
+## Diagnóstico de compatibilidad en Samsung (9 de noviembre de 2026)
+
+Movimiento prioriza sensores wake-up y, si no existen, el acelerómetro físico antes del sensor virtual de aceleración lineal. La gravedad se filtra en el servicio. Se mantiene el umbral existente y el bloqueo parcial de CPU. La detección y la confirmación HTTP son comprobaciones distintas; el envío completo debe validarse por separado.
+
+En el Samsung SM-S908E con Android 16 probado, accesibilidad recibió la pulsación de volumen con la pantalla encendida, pero no durante la prueba con pantalla apagada. Un servicio activo no garantiza que el sistema entregue esas teclas. No se debe prometer compatibilidad universal con pantalla apagada.
+
+Las compilaciones depurables registran en SafeAlertDiagnostics la llegada de lecturas, el estado interactivo, gestos, eventos de volumen y el resultado HTTP. No registran tokens, coordenadas, destinatarios ni contenido de mensajes.
+
+## Batería en las notificaciones de WhatsApp
+
+El POST `/alerta` admite `bateriaPorcentaje` opcional: un entero de 0 a 100 del dispositivo emisor. Android lo obtiene sin permisos adicionales mediante `ACTION_BATTERY_CHANGED`, tanto desde el botón SOS (puente Capacitor `SosDevice`) como desde los servicios nativos de movimiento y volumen. La web intenta usar Battery Status API cuando el navegador la ofrece; la lectura tiene un límite de 800 ms y nunca impide enviar el SOS.
+
+Green API recibe el porcentaje en el texto «Batería al enviar». Sin lectura disponible se informa «No disponible». Es una captura al enviar la solicitud, no un seguimiento en vivo; los reintentos nativos leen de nuevo la batería. No se guarda este campo en la base de datos ni requiere migración. Para usarlo en producción hay que desplegar el backend actualizado y distribuir una nueva APK; los clientes antiguos siguen siendo compatibles al omitir el campo. Se conserva la regla de una alerta activa y la deduplicación de eventos, sin reenviar WhatsApp por esos casos.

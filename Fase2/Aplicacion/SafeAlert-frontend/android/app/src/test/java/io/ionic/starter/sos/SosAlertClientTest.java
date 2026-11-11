@@ -33,7 +33,8 @@ public class SosAlertClientTest {
         assertEquals(EVENT, body.getString("eventoId"));
         assertEquals(-33.45, body.getDouble("latitud"), 0.000001);
         assertEquals(-70.66, body.getDouble("longitud"), 0.000001);
-        assertFalse(body.getBoolean("notificarPolicia"));
+        // El DTO actual no admite este campo; no enviarlo evita un rechazo de validación.
+        assertFalse(body.has("notificarPolicia"));
     }
     @Test public void omitsBothCoordinatesWhenLocationIsUnavailable() throws Exception {
         success();
@@ -48,6 +49,15 @@ public class SosAlertClientTest {
         JSONObject body = new JSONObject(server.takeRequest().getBody().readUtf8());
         assertEquals("MOVIMIENTO", body.getString("origen"));
         assertEquals(0, body.getDouble("latitud"), 0);
+    }
+    @Test public void sendsZeroBatteryAndOmitsUnknownOrInvalidValues() throws Exception {
+        for (Integer battery : new Integer[]{0, 37, 100, null, -1, 101}) {
+            success();
+            assertTrue(new SosAlertClient("MOVIMIENTO").send(endpoint, "test", EVENT, null, null, battery).confirmed());
+            JSONObject body = new JSONObject(server.takeRequest().getBody().readUtf8());
+            if (battery != null && battery >= 0 && battery <= 100) assertEquals(battery.intValue(), body.getInt("bateriaPorcentaje"));
+            else assertFalse(body.has("bateriaPorcentaje"));
+        }
     }
     @Test public void neverConfirmsAnErrorOrSuccessWithoutAnId() {
         server.enqueue(new MockResponse().setResponseCode(500).setBody("{}"));

@@ -34,3 +34,16 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .settings-link { display: block; margin-top: 13px; padding: 4px 0; background: none; color: #28695c; font-size: 12px; text-decoration: underline; }
 .permission-detail { font-weight: 600; }
 @media (max-width: 760px) { .permission-grid { grid-template-columns: 1fr; } .permission-button { width: 100%; } }
+
+.widget-card { margin-bottom: 23px; }
+.widget-preview { width: min(100%, 280px); background: linear-gradient(135deg, #244e43, #102f2d); color: white; padding: 16px; border: 1px solid #477362; border-radius: 24px; margin: 22px 0; box-shadow: 0 8px 22px #163e3914; }
+.widget-preview-heading, .widget-preview-content { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.widget-preview-heading { margin-bottom: 14px; }
+.widget-preview-heading strong { font-size: 10px; letter-spacing: 2px; color: #c8e5da; }
+.widget-preview-refresh { display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 28px; padding: 0; line-height: 0; background: #284f43; border: 1px solid #476f60; border-radius: 9px; }
+.widget-preview-refresh svg { display: block; width: 16px; height: 16px; fill: #c8e5da; }
+.widget-preview-content > div { display: grid; gap: 5px; }
+.widget-preview-content em { font-size: 8px; font-style: normal; letter-spacing: 1px; color: #9fc6b8; }
+.widget-preview-content span { font-size: 14px; font-weight: 650; }
+.widget-preview-content small { font-size: 10px; color: #afcfc2; }
+.widget-preview-content b { display: grid; place-items: center; flex-shrink: 0; width: 60px; height: 60px; border: 3px solid #e897a4; border-radius: 50%; background: linear-gradient(#da5a6d, #b12f48); font-size: 17px; }

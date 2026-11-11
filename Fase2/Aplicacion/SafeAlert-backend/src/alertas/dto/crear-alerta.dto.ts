@@ -1,4 +1,4 @@
-import { IsEnum, IsLatitude, IsLongitude, IsNumber, IsOptional, IsUUID, ValidateIf } from 'class-validator';
+import { IsEnum, IsInt, Min, Max, IsLatitude, IsLongitude, IsNumber, IsOptional, IsUUID, ValidateIf } from 'class-validator';
 
 export enum OrigenAlerta {
   BOTON = 'BOTON',
@@ -7,6 +7,13 @@ export enum OrigenAlerta {
 }
 
 export class CrearAlertaDto {
+  // Porcentaje del dispositivo emisor al enviar el SOS; no es una medición en vivo.
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  bateriaPorcentaje?: number;
+
   @IsLatitude()
   @IsNumber()
   @IsOptional()

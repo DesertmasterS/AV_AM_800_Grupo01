@@ -39,15 +39,16 @@ public class VolumeKeyDetectorTest {
         assertFalse(detector.sample(2500, 24, 0));
         assertTrue(detector.sample(2600, 24, 0));
     }
-    @Test public void preventsAnotherAlertForThirtySeconds() {
+    @Test public void detectsAnotherSequenceWithoutThirtySecondWait() {
         VolumeKeyDetector detector = new VolumeKeyDetector();
         detector.sample(100, 25, 0); detector.sample(400, 25, 0);
         assertTrue(detector.sample(700, 25, 0));
         assertFalse(detector.sample(800, 25, 0));
         assertFalse(detector.sample(900, 25, 0));
+        assertTrue(detector.sample(1000, 25, 0));
         assertFalse(detector.sample(1000, 25, 0));
-        assertFalse(detector.sample(31000, 25, 0));
-        assertFalse(detector.sample(31300, 25, 0));
-        assertTrue(detector.sample(31600, 25, 0));
+        assertFalse(detector.sample(1100, 24, 0));
+        assertFalse(detector.sample(1200, 24, 0));
+        assertTrue(detector.sample(1300, 24, 0));
     }
 }

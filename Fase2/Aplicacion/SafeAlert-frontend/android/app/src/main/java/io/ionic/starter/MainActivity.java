@@ -1,5 +1,7 @@
 package io.ionic.starter;
 
+import io.ionic.starter.sos.SosDevicePlugin;
+import io.ionic.starter.widget.SosWidgetPlugin;
 import android.view.KeyEvent;
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
@@ -11,6 +13,8 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(SosWidgetPlugin.class);
+        registerPlugin(SosDevicePlugin.class);
         registerPlugin(MotionSosPlugin.class);
         registerPlugin(VolumeSosPlugin.class);
         super.onCreate(savedInstanceState);

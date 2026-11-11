@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="SosWidgetButton">
+        <item name="android:minWidth">0dp</item><item name="android:minHeight">0dp</item>
+        <item name="android:padding">0dp</item><item name="android:includeFontPadding">false</item>
+        <item name="android:background">@drawable/sos_widget_button</item><item name="android:backgroundTint">@null</item>
+        <item name="android:text">S.O.S</item><item name="android:textColor">#FFFFFF</item>
+        <item name="android:fontFamily">sans-serif-medium</item><item name="android:textStyle">bold</item>
+        <item name="android:gravity">center</item><item name="android:contentDescription">Abrir confirmación de alerta de emergencia</item>
+    </style>
+</resources>

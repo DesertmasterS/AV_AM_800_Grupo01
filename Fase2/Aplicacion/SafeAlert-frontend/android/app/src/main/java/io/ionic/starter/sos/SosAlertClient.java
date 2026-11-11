@@ -38,6 +38,10 @@ public final class SosAlertClient {
     }
 
     public Result send(String endpoint, String token, String eventId, Double latitude, Double longitude) {
+        return send(endpoint, token, eventId, latitude, longitude, null);
+    }
+
+    public Result send(String endpoint, String token, String eventId, Double latitude, Double longitude, Integer batteryPercentage) {
         HttpURLConnection connection = null;
         try {
             if (cancelled || Thread.currentThread().isInterrupted()) return new Result(0, -1, false);
@@ -54,6 +58,9 @@ public final class SosAlertClient {
             JSONObject body = new JSONObject();
             body.put("origen", origin);
             body.put("eventoId", eventId);
+            if (batteryPercentage != null && batteryPercentage >= 0 && batteryPercentage <= 100) {
+                body.put("bateriaPorcentaje", batteryPercentage);
+            }
             if (latitude != null && longitude != null) {
                 body.put("latitud", latitude);
                 body.put("longitud", longitude);

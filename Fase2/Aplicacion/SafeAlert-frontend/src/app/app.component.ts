@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { addIcons } from 'ionicons';
 import { shieldCheckmarkOutline, homeOutline, peopleOutline, navigateOutline, timeOutline, settingsOutline, personOutline, arrowForwardOutline, chevronForwardOutline, locationOutline, checkmarkOutline, alertOutline, radioOutline, lockClosedOutline, closeOutline, informationCircleOutline, callOutline, searchOutline, personAddOutline, volumeHighOutline } from 'ionicons/icons';
+import { WidgetService } from './settings/widget/widget.service';
 import { HardwareSosService } from './services/hardware-sos.service';
 
 @Component({
@@ -9,6 +10,7 @@ import { HardwareSosService } from './services/hardware-sos.service';
   styleUrls: ['app.component.scss'], standalone: false,
 })
 export class AppComponent implements OnInit {
+  private readonly widget = inject(WidgetService);
   private readonly hardwareSos = inject(HardwareSosService);
   
   readonly navigation = [
@@ -25,5 +27,6 @@ export class AppComponent implements OnInit {
   }
   ngOnInit(): void {
     this.hardwareSos.inicializarListener();
+    void this.widget.inicializar();
  }  
 }

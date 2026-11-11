@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="12dp" android:background="@drawable/sos_widget_background">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="28dp"
+        android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="16dp" android:layout_height="16dp"
+            android:src="@drawable/sos_widget_shield" android:importantForAccessibility="no" />
+        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:layout_marginStart="6dp" android:text="SAFEALERT" android:textColor="#C8E5DA"
+            android:textSize="10sp" android:letterSpacing="0.12" android:textStyle="bold" android:maxLines="1" />
+        <ImageButton android:id="@+id/widget_refresh" android:layout_width="32dp" android:layout_height="28dp"
+            android:padding="6dp" android:scaleType="centerInside"
+            android:background="@drawable/sos_widget_refresh" android:backgroundTint="@null"
+            android:src="@drawable/sos_widget_refresh_icon"
+            android:contentDescription="Actualizar estado de la alerta" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:orientation="vertical" android:paddingEnd="8dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/widget_indicator" android:layout_width="12dp" android:layout_height="wrap_content"
+                    android:text="●" android:textColor="#E8C78B" android:textSize="9sp" android:importantForAccessibility="no" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="TU ALERTA" android:textColor="#9FC6B8" android:textSize="8sp" android:letterSpacing="0.08" />
+            </LinearLayout>
+            <TextView android:id="@+id/widget_status" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" android:text="Estado sin confirmar" android:textColor="#FFFFFF"
+                android:textSize="13sp" android:textStyle="bold" android:maxLines="2" android:ellipsize="end" />
+            <TextView android:id="@+id/widget_updated" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" android:text="Pulsa ↻ para consultar" android:textColor="#AFCFC2"
+                android:textSize="9sp" android:maxLines="2" android:ellipsize="end" />
+        </LinearLayout>
+        <FrameLayout android:id="@+id/widget_sos_container" android:layout_width="wrap_content" android:layout_height="wrap_content">
+            <include layout="@layout/sos_widget_button_60" />
+        </FrameLayout>
+    </LinearLayout>
+</LinearLayout>
