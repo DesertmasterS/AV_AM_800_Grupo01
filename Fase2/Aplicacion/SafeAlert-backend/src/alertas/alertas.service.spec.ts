@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AlertasService } from './alertas.service';
 import { Alerta } from '../database/entities/alerta.entity';
@@ -11,12 +11,12 @@ import { validate } from 'class-validator';
 
 describe('Alertas por movimiento', () => {
   const eventoId = 'd10f34b5-1678-41cd-9a14-36b686a62745';
-  const repo = { findOne: jest.fn(), find: jest.fn(), create: jest.fn(), save: jest.fn() };
-  const usuarios = { findOne: jest.fn() };
-  const contactos = { find: jest.fn() };
+  const repo = { findOne: vi.fn(), find: vi.fn(), create: vi.fn(), save: vi.fn() };
+  const usuarios = { findOne: vi.fn() };
+  const contactos = { find: vi.fn() };
   let service: AlertasService;
   beforeEach(async () => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
     contactos.find.mockResolvedValue([]);
     usuarios.findOne.mockResolvedValue({ id: 7 });
     repo.findOne.mockResolvedValue(null);
@@ -40,7 +40,7 @@ describe('Alertas por movimiento', () => {
     process.env.GREEN_API_ID_INSTANCE = 'test';
     process.env.GREEN_API_TOKEN_INSTANCE = 'test';
     contactos.find.mockResolvedValue([{ telefono: '+56912345678', nombre: 'Contacto de prueba' }]);
-    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true } as Response);
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true } as Response);
     try {
       await service.crearAlerta({ bateriaPorcentaje }, 7);
       expect(fetchMock).toHaveBeenCalledTimes(1);

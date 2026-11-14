@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
+import { configureHttpSecurity } from './security/http/http-security';
 import { AppModule } from './app.module';
 
 // Fijar zona horaria de Chile
@@ -8,6 +9,7 @@ process.env.TZ = 'America/Santiago';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  configureHttpSecurity(app);
 
   // 1. Parser de cookies para la sesión JWT
   app.use(cookieParser());

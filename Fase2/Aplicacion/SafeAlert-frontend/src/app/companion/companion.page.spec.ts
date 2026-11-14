@@ -39,7 +39,7 @@ describe('CompanionPage', () => {
         fecha: '2026-10-27T13:06:28.000Z',
       }),
     );
-    api.enviarAlerta.mockReturnValue(of({ id: 35 }));
+    api.enviarAlerta.mockReturnValue(of({ id: 35, eventoId: 'd10f34b5-1678-41cd-9a14-36b686a62745' }));
 
     TestBed.configureTestingModule({
       providers: [
@@ -55,15 +55,13 @@ describe('CompanionPage', () => {
     vi.unstubAllGlobals();
   });
 
-  it('consulta la alerta en vivo al buscar un ID válido y rechaza IDs inválidos', () => {
-    page.alertaIdBusqueda.set('');
-    page.buscarAlertaManual();
+  it('sigue alertas compartidas por UUID y omite las que no tienen código', () => {
+    const alerta = { id: 21, alertaId: 21, nombreUsuario: 'Persona Uno', tipo: 'EMERGENCIA_SOS', estado: 'ACTIVA', latitud: null, longitud: null, fecha: '2026-10-27T13:06:28.000Z' };
+    page.seleccionarCompartida(alerta);
     expect(api.obtenerAlertaEnVivo).not.toHaveBeenCalled();
-    expect(page.error()).toContain('Ingresa un número');
-
-    page.alertaIdBusqueda.set('21');
-    page.buscarAlertaManual();
-    expect(api.obtenerAlertaEnVivo).toHaveBeenCalledWith(21);
+    const eventoId = 'd10f34b5-1678-41cd-9a14-36b686a62745';
+    page.seleccionarCompartida({ ...alerta, eventoId });
+    expect(api.obtenerAlertaEnVivo).toHaveBeenCalledWith(eventoId);
     expect(page.alertaActiva()?.nombreUsuario).toBe('Persona Uno');
   });
 
@@ -76,7 +74,7 @@ describe('CompanionPage', () => {
       expect.objectContaining({ latitud: -33.45, longitud: -70.66, origen: 'BOTON' }),
     );
     expect(page.transmitiendo()).toBe(true);
-    expect(api.obtenerAlertaEnVivo).toHaveBeenCalledWith(35);
+    expect(api.obtenerAlertaEnVivo).toHaveBeenCalledWith('d10f34b5-1678-41cd-9a14-36b686a62745');
   });
 
   it('permite explorar el ejemplo sin llamar al backend y detener la transmisión', () => {

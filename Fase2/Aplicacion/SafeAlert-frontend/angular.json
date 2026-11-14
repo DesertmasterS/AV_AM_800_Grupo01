@@ -34,7 +34,10 @@
                 "output": "./svg"
               }
             ],
-            "styles": ["src/global.scss", "src/theme/variables.scss"],
+            "styles": [
+              "src/global.scss",
+              "src/theme/variables.scss"
+            ],
             "scripts": []
           },
           "configurations": {
@@ -57,7 +60,15 @@
                   "with": "src/environments/environment.prod.ts"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                },
+                "fonts": false
+              }
             },
             "development": {
               "optimization": false,
@@ -67,13 +78,20 @@
             },
             "ci": {
               "progress": false
+            },
+            "unit-tests": {
+              "aot": false,
+              "optimization": false,
+              "sourceMap": true
             }
           },
           "defaultConfiguration": "production"
         },
         "serve": {
           "builder": "@angular/build:dev-server",
-          "options": { "prebundle": false },
+          "options": {
+            "prebundle": false
+          },
           "configurations": {
             "production": {
               "buildTarget": "app:build:production"
@@ -97,8 +115,10 @@
           "builder": "@angular/build:unit-test",
           "options": {
             "tsConfig": "tsconfig.spec.json",
-            "buildTarget": "::development",
-            "setupFiles": ["src/test-setup.ts"]
+            "buildTarget": "app:build:unit-tests",
+            "setupFiles": [
+              "src/test-setup.ts"
+            ]
           },
           "configurations": {
             "ci": {

@@ -14,11 +14,12 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "oxlint src/ test/",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "test:watch": "npm test -- --watch",
+    "test": "npm run test:types && vitest run --config src/security/testing/vitest.config.mts",
+    "test:watch": "vitest --config src/security/testing/vitest.config.mts",
     "test:cov": "npm test -- --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:debug": "node --inspect-brk node_modules/vitest/vitest.mjs run --config src/security/testing/vitest.config.mts --no-file-parallelism",
+    "test:e2e": "npm run test:types && vitest run --config src/security/testing/vitest.config.mts --mode e2e",
+    "test:types": "tsc --project src/security/testing/tsconfig.spec.json"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
@@ -44,18 +45,25 @@
     "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
-    "@types/jest": "^30.0.0",
     "@types/node": "^24.0.0",
     "@types/supertest": "^7.0.0",
-    "jest": "^30.0.0",
     "oxlint": "^1.58.0",
     "prettier": "^3.4.2",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
-    "ts-jest": "^29.2.5",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.2",
+    "vitest": "4.1.12",
+    "@vitest/coverage-v8": "4.1.12"
+  },
+  "overrides": {
+    "@nestjs/mau": {
+      "undici": "6.29.1"
+    },
+    "external-editor": {
+      "tmp": "0.2.7"
+    }
   }
 }

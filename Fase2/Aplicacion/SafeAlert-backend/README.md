@@ -46,6 +46,8 @@ $ npm run start:prod
 
 ## Run tests
 
+Las pruebas usan Vitest y TypeScript con metadatos de decoradores para NestJS. La configuración está en `src/security/testing/`. `npm test` comprueba tipos y ejecuta las pruebas unitarias; `test:e2e` prueba la ruta de salud y las cabeceras HTTP sin conectarse a una base de producción.
+
 ```bash
 # unit tests
 $ npm run test

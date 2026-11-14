@@ -1,0 +1,1 @@
+{"name":"safealert-zap-runtime","private":true,"version":"1.0.0","dependencies":{"@electric-sql/pglite":"0.5.16","@electric-sql/pglite-socket":"0.2.19"}}

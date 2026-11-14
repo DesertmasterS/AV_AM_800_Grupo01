@@ -3,3 +3,6 @@ dist
 .git
 .env
 npm-debug.log
+# Herramientas y evidencias locales de las pruebas de seguridad
+/src/security/zap
+/.tmp
