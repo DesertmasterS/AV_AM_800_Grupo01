@@ -1,0 +1,2097 @@
+{
+  "info": {
+    "name": "SafeAlert · Integración local · Postman",
+    "description": "Pruebas HTTP secuenciales de integración sobre NestJS y PGlite. Green API simulado en localhost; sin mensajes reales. Las cuentas son únicas por ejecución. No mide sensores Android, Neon, Cloud Run ni entrega real de WhatsApp. Ejecutar la colección completa en orden, una iteración. Cookies automáticas desactivadas para aislar A/B; cookie de sesión explícita por solicitud. Cierre de sesión verifica borrado de cookie, no revocación del JWT.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 · Verificar laboratorio y crear identidad de ejecución",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/__lab/status"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"Entorno local aislado y proveedor simulado\", () => { pm.expect(data.profile).to.eql('postman'); pm.expect(data.externalMessagingEnabled).to.eql(false); pm.expect(data.externalFetchBlocked).to.eql(true); pm.expect(data.providerSimulated).to.eql(true); });if(data.profile !== 'postman' || data.externalMessagingEnabled !== false || data.providerSimulated !== true) { pm.execution.setNextRequest(null); throw new Error('Laboratorio no aislado'); }\n  const run = Date.now() + '-' + Math.random().toString(36).slice(2,8); pm.collectionVariables.set('run_id', run);\n  pm.collectionVariables.set('email_a', 'postman.a.' + run + '@example.invalid'); pm.collectionVariables.set('email_b', 'postman.b.' + run + '@example.invalid');\n  pm.collectionVariables.set('password', 'Local-Postman-2026!'); pm.collectionVariables.set('event_first', pm.variables.replaceIn('{{$guid}}'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 · Registrar punto inicial del receptor simulado",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/__lab/outbox"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"Receptor simulado disponible\", () => { pm.expect(data.simulated).to.eql(true); pm.expect(data.messages).to.be.an('array'); });pm.collectionVariables.set('outbox_start', data.messages.length);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 · Perfil sin sesión se rechaza",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/auth/me"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 · Registro con datos inválidos se rechaza",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/auth/register",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nombre\":\"X\",\"apellido\":\"\",\"telefono\":\"abc\",\"email\":\"incorrecto\",\"password\":\"123\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 · Registrar cuenta A",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/auth/register",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nombre\":\"Postman a\",\"apellido\":\"Integracion\",\"telefono\":\"+56900007001\",\"email\":\"{{email_a}}\",\"password\":\"{{password}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.collectionVariables.set('token_a', data.token);pm.collectionVariables.set('user_a', data.usuario.id);pm.test(\"Datos públicos sin clave ni hash\", () => { pm.expect(data.usuario.email).to.eql(pm.collectionVariables.get('email_a')); pm.expect(data.usuario).not.to.have.property('password'); pm.expect(data.usuario).not.to.have.property('passwordHash'); pm.expect(data.token).to.be.a('string'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 · Registro duplicado se rechaza",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/auth/register",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nombre\":\"Postman a\",\"apellido\":\"Integracion\",\"telefono\":\"+56900007001\",\"email\":\"{{email_a}}\",\"password\":\"{{password}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 · Clave incorrecta se rechaza",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"{{email_a}}\",\"password\":\"Incorrecta-2026!\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 · Iniciar sesión A",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"{{email_a}}\",\"password\":\"{{password}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.collectionVariables.set('token_a', data.token);pm.collectionVariables.set('user_a', data.usuario.id);pm.test(\"Cookie de sesión HttpOnly y cuenta correcta\", () => { pm.expect(pm.response.headers.get('Set-Cookie')).to.include('HttpOnly'); pm.expect(data.usuario.email).to.eql(pm.collectionVariables.get('email_a')); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 · Leer perfil A mediante cookie",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/auth/me"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"La sesión corresponde a A\", () => { pm.expect(data.usuario.id).to.eql(Number(pm.collectionVariables.get('user_a'))); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 · Registrar cuenta independiente B",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/auth/register",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nombre\":\"Postman b\",\"apellido\":\"Integracion\",\"telefono\":\"+56900007002\",\"email\":\"{{email_b}}\",\"password\":\"{{password}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.collectionVariables.set('token_b', data.token);pm.collectionVariables.set('user_b', data.usuario.id);pm.test(\"Las cuentas son diferentes\", () => { pm.expect(data.usuario.id).not.to.eql(Number(pm.collectionVariables.get('user_a'))); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 · Contactos A inicialmente vacíos",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/contactos-emergencia"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"Sin contactos previos\", () => { pm.expect(data.contactos).to.eql([]); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 · Teléfono inválido se rechaza",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/contactos-emergencia",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nombre\":\"Invalido\",\"telefono\":\"../../etc/passwd\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 · Crear contacto A y normalizar teléfono",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/contactos-emergencia",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nombre\":\"Contacto sintetico Postman\",\"telefono\":\"+56 9 0000 8001\",\"relacion\":\"Pruebas locales\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.collectionVariables.set('contact_id', data.contacto.id);pm.test(\"Contacto pendiente y teléfono normalizado\", () => { pm.expect(data.contacto.telefono).to.eql('+56900008001'); pm.expect(data.contacto.confirmado).to.eql(false); pm.expect(data.contacto).not.to.have.property('tokenConfirmacion'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 · Contacto duplicado se rechaza",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/contactos-emergencia",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nombre\":\"Contacto sintetico Postman\",\"telefono\":\"+56 9 0000 8001\",\"relacion\":\"Pruebas locales\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 · Persistencia del contacto creado",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/contactos-emergencia"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"Contacto almacenado y token oculto\", () => { pm.expect(data.contactos).to.have.lengthOf(1); pm.expect(data.contactos[0].id).to.eql(Number(pm.collectionVariables.get('contact_id'))); pm.expect(data.contactos[0]).not.to.have.property('tokenConfirmacion'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 · Reenvío antes de 48 horas se rechaza",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/contactos-emergencia/{{contact_id}}/reenviar",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"Se informa la espera de invitaciones\", () => { pm.expect(data.message).to.include('48h'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17 · Revisar invitación en receptor simulado",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/__lab/outbox"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "const current = data.messages.slice(Number(pm.collectionVariables.get('outbox_start')));pm.test(\"Una sola invitación para el destinatario ficticio\", () => { pm.expect(current).to.have.lengthOf(1); pm.expect(current[0].chatId).to.eql('56900008001@c.us'); pm.expect(current[0].message).to.include('48 horas'); });const match = current[0].message.match(new RegExp('confirmar/([a-f0-9-]{36})', 'i')); pm.test('Invitación con código UUID', () => pm.expect(match).not.to.eql(null)); if(match) pm.collectionVariables.set('confirmation_token', match[1]);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18 · Abrir página de confirmación",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/contactos-emergencia/confirmar/{{confirmation_token}}"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const html = pm.response.text();",
+              "pm.test('Respuesta HTML con CSP', () => { pm.expect(pm.response.headers.get('Content-Type')).to.include('text/html'); pm.expect(pm.response.headers.get('Content-Security-Policy')).to.include(\"default-src 'none'\"); });",
+              "pm.test(\"Se ofrece aceptar o rechazar\", () => { pm.expect(html).to.include('aceptas ser contacto'); pm.expect(html).to.include('Rechazar'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "19 · Confirmar contacto mediante enlace",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/contactos-emergencia/confirmar/{{confirmation_token}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const html = pm.response.text();",
+              "pm.test('Respuesta HTML con CSP', () => { pm.expect(pm.response.headers.get('Content-Type')).to.include('text/html'); pm.expect(pm.response.headers.get('Content-Security-Policy')).to.include(\"default-src 'none'\"); });",
+              "pm.test(\"La aceptación es exitosa\", () => { pm.expect(html).to.include('Solicitud confirmada con éxito'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "20 · Comprobar confirmación persistida",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/contactos-emergencia"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"Contacto confirmado y notificaciones activas\", () => { pm.expect(data.contactos[0].confirmado).to.eql(true); pm.expect(data.contactos[0].notificarActivo).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "21 · SOS con coordenadas incompletas se rechaza",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"origen\":\"BOTON\",\"latitud\":0}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "22 · Batería fuera del rango se rechaza",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"origen\":\"BOTON\",\"eventoId\":\"{{$guid}}\",\"latitud\":0,\"longitud\":0,\"bateriaPorcentaje\":101}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "23 · Movimiento sin UUID se rechaza",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"origen\":\"MOVIMIENTO\",\"latitud\":0,\"longitud\":0}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "24 · Crear SOS de botón con batería",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"origen\":\"BOTON\",\"eventoId\":\"{{event_first}}\",\"latitud\":0,\"longitud\":0,\"bateriaPorcentaje\":73}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.collectionVariables.set('alert_first', data.id);pm.test(\"Nuevo SOS y coordenadas cero válidas\", () => { pm.expect(data.id).to.be.a('number'); pm.expect(data.duplicada).to.eql(false); pm.expect(data.origen).to.eql('BOTON'); pm.expect(Number(data.latitud)).to.eql(0); pm.expect(Number(data.longitud)).to.eql(0); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "25 · Validar mensaje SOS sin enviarlo a WhatsApp",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/__lab/outbox"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "const current = data.messages.slice(Number(pm.collectionVariables.get('outbox_start'))); const message = current[current.length-1];pm.test(\"Mensaje con batería, coordenadas y seguimiento\", () => { pm.expect(current).to.have.lengthOf(2); pm.expect(message.message).to.include('73%'); pm.expect(message.message).to.include('https://www.google.com/maps?q=0,0'); pm.expect(message.message).to.include(pm.collectionVariables.get('event_first')); pm.expect(message.message).to.include('Método:* BOTON'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "26 · Reintento del mismo evento es idempotente",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"origen\":\"BOTON\",\"eventoId\":\"{{event_first}}\",\"latitud\":0,\"longitud\":0,\"bateriaPorcentaje\":73}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"No duplica el mismo evento\", () => { pm.expect(data.id).to.eql(Number(pm.collectionVariables.get('alert_first'))); pm.expect(data.duplicada).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "27 · Otra alerta mientras hay una activa reutiliza la existente",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"origen\":\"BOTON\",\"eventoId\":\"{{$guid}}\",\"latitud\":0,\"longitud\":0,\"bateriaPorcentaje\":73}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"Se mantiene una sola alerta activa\", () => { pm.expect(data.id).to.eql(Number(pm.collectionVariables.get('alert_first'))); pm.expect(data.yaActiva).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "28 · Consultar alerta activa",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta/activa"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"La activa corresponde al SOS creado\", () => { pm.expect(data.activa.id).to.eql(Number(pm.collectionVariables.get('alert_first'))); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "29 · Actualizar ubicación del SOS",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta/{{alert_first}}/ubicacion",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"latitud\":0.001,\"longitud\":0.002}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"Coordenadas actualizadas\", () => { pm.expect(Number(data.latitud)).to.eql(0.001); pm.expect(Number(data.longitud)).to.eql(0.002); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "30 · Seguimiento mediante UUID sin sesión",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta/publica/{{event_first}}"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"Seguimiento refleja ubicación persistida\", () => { pm.expect(data.estado).to.eql('ACTIVA'); pm.expect(Number(data.latitud)).to.eql(0.001); pm.expect(Number(data.longitud)).to.eql(0.002); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "31 · ID numérico sin sesión no permite seguimiento",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta/publica/{{alert_first}}"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "32 · B no puede modificar ubicación de A",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_b}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta/{{alert_first}}/ubicacion",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"latitud\":1,\"longitud\":1}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "33 · B no puede detener SOS de A",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_b}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta/{{alert_first}}/detener",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "34 · B no puede ver SOS ajeno por ID numérico",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_b}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta/publica/{{alert_first}}"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "35 · B no puede modificar contacto de A",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_b}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/contactos-emergencia/{{contact_id}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nombre\":\"Cambio no autorizado\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "36 · B no puede borrar contacto de A",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_b}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/contactos-emergencia/{{contact_id}}"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "37 · B no ve contactos de A",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_b}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/contactos-emergencia"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"Aislamiento de cuentas\", () => { pm.expect(data.contactos).to.eql([]); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "38 · Detener SOS como propietario",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta/{{alert_first}}/detener",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"SOS finalizado\", () => { pm.expect(data.estado).to.eql('FINALIZADA'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "39 · Seguimiento público finalizado oculta coordenadas",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta/publica/{{event_first}}"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"Sin coordenadas públicas después de finalizar\", () => { pm.expect(data.estado).to.eql('FINALIZADA'); pm.expect(data.latitud).to.eql(null); pm.expect(data.longitud).to.eql(null); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "40 · Ya no existe una alerta activa",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta/activa"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"Activa vacía\", () => { pm.expect(data.activa).to.eql(null); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "41 · Crear SOS de movimiento inmediatamente después",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"origen\":\"MOVIMIENTO\",\"eventoId\":\"{{$guid}}\",\"latitud\":0,\"longitud\":0,\"bateriaPorcentaje\":73}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.collectionVariables.set('alert_motion', data.id);pm.test(\"Nueva alerta de movimiento sin bloqueo de 30 segundos\", () => { pm.expect(data.duplicada).to.eql(false); pm.expect(data.origen).to.eql('MOVIMIENTO'); pm.expect(data.id).not.to.eql(Number(pm.collectionVariables.get('alert_first'))); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "42 · Finalizar SOS de movimiento",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta/{{alert_motion}}/detener",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"Movimiento finalizado\", () => { pm.expect(data.estado).to.eql('FINALIZADA'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "43 · Crear SOS de volumen sin lectura de batería",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"origen\":\"VOLUMEN\",\"eventoId\":\"{{$guid}}\",\"latitud\":0,\"longitud\":0}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.collectionVariables.set('alert_volume', data.id);pm.test(\"SOS de volumen creado\", () => { pm.expect(data.origen).to.eql('VOLUMEN'); pm.expect(data.duplicada).to.eql(false); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "44 · Validar ausencia de duplicados y batería opcional",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/__lab/outbox"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "const current = data.messages.slice(Number(pm.collectionVariables.get('outbox_start')));pm.test(\"Una invitación y tres SOS simulados\", () => { pm.expect(current).to.have.lengthOf(4); pm.expect(current[3].message).to.include('No disponible'); pm.expect(current[3].message).to.include('Método:* VOLUMEN'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "45 · Finalizar SOS de volumen",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta/{{alert_volume}}/detener",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"Volumen finalizado\", () => { pm.expect(data.estado).to.eql('FINALIZADA'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "46 · Historial conserva los tres SOS finalizados",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta/historial"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"Historial completo y consistente\", () => { pm.expect(data).to.have.lengthOf(3); pm.expect(data.every(a => a.estado === 'FINALIZADA')).to.eql(true); pm.expect(data.map(a => a.id)).to.include(Number(pm.collectionVariables.get('alert_first'))); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "47 · Desactivar notificaciones del contacto",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/contactos-emergencia/{{contact_id}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nombre\":\"Contacto editado\",\"notificarActivo\":false}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"Edición guardada\", () => { pm.expect(data.contacto.nombre).to.eql('Contacto editado'); pm.expect(data.contacto.notificarActivo).to.eql(false); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "48 · Crear SOS con contacto desactivado",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"origen\":\"BOTON\",\"eventoId\":\"{{$guid}}\",\"latitud\":0,\"longitud\":0,\"bateriaPorcentaje\":73}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.collectionVariables.set('alert_muted', data.id);pm.test(\"El SOS se registra igualmente\", () => { pm.expect(data.duplicada).to.eql(false); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "49 · No se notifica al contacto desactivado",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/__lab/outbox"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"El receptor simulado no recibió mensajes nuevos\", () => { pm.expect(data.messages.length - Number(pm.collectionVariables.get('outbox_start'))).to.eql(4); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "50 · Finalizar último SOS",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/alerta/{{alert_muted}}/detener",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"Último SOS finalizado\", () => { pm.expect(data.estado).to.eql('FINALIZADA'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "51 · Eliminar contacto sintético",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/contactos-emergencia/{{contact_id}}"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "52 · Comprobar eliminación persistida",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/contactos-emergencia"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              "pm.test(\"Lista vacía después de eliminar\", () => { pm.expect(data.contactos).to.eql([]); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "53 · Cerrar sesión A",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "safealert_session={{token_a}}"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/auth/logout",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "pm.test(\"El servidor indica borrar la cookie\", () => { pm.expect(pm.response.headers.get('Set-Cookie')).to.include('Expires=Thu, 01 Jan 1970'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "54 · Perfil sin cookie vuelve a rechazarse",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://127.0.0.1:4500/auth/me"
+      },
+      "protocolProfileBehavior": {
+        "disableCookies": true,
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "pm.test('Cabecera de protección nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+              "const data = pm.response.json();",
+              ""
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [],
+  "auth": {
+    "type": "noauth"
+  }
+}

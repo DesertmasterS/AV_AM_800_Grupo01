@@ -1,0 +1,19 @@
+{
+  "mode": "built-in image_gen",
+  "date": "2026-11-22",
+  "purpose": "Tres propuestas para revisión; sin integrar todavía en la aplicación",
+  "prompts": [
+    {
+      "label": "1. Escudo protector",
+      "prompt": "Use case: logo-brand. Create ONE polished original logo proposal for SafeAlert, an Android personal safety and emergency SOS app with trusted contacts, live location and motion activation. White background, square brand presentation, generous whitespace. Concept: a compact elegant shield silhouette whose negative space forms a clear flowing letter S, with a small coral alert accent integrated at the top right. Flat vector-like design, bold simple geometry, carefully balanced rounded corners, readable at app icon size. Restrained palette: deep navy #102F4B, teal #18A9A1 and a small coral #EF555A accent. Center a large standalone symbol in the upper middle with the wordmark 'SafeAlert' precisely spelled below it in a refined modern rounded sans-serif, navy. No tagline, no extra text, no mockups, no smartphone, no gradients, no shadows, no 3D, no medical cross, no police insignia, no watermarks. Professional distinctive friendly protective identity rather than threatening military styling. Output a single clean logo concept, not a grid."
+    },
+    {
+      "label": "2. Alerta y ubicación",
+      "prompt": "Use case: logo-brand. Create ONE polished original logo proposal for 'SafeAlert', an Android personal security app for emergency SOS, live location and notifying trusted contacts. White background, square composition with generous whitespace. Concept: a bold coral location pin with a beautifully integrated white exclamation mark in its negative space, complemented by one restrained navy signal arc conveying an emergency signal being sent; design as one cohesive elegant geometric mark, not a stack of unrelated icons. Minimal flat vector-like branding, precise proportions, smooth curves, strong readability as a mobile app icon. Primary palette deep navy #102F4B and coral #EF555A with optional tiny teal #18A9A1 detail only if necessary. Symbol centered above the exact wordmark 'SafeAlert' in confident clean rounded sans-serif, 'Safe' navy and 'Alert' coral, balanced kerning. No tagline, no extra text, no grid, no device mockup, no gradients, no shadows, no 3D, no watermarks, no medical or police insignia. This is a single logo exploration."
+    },
+    {
+      "label": "3. Red de confianza",
+      "prompt": "Use case: logo-brand. Design ONE refined original logo for 'SafeAlert', a personal safety Android app connecting a person in danger to trusted emergency contacts, including SOS and live location. Square presentation on pure white, generous negative space. Concept: three substantial rounded interlocking teal and navy segments with subtly integrated circular endpoints forming an almost closed protective ring around a small coral center point; communicate human connection, protection and an alert reaching trusted people. Distinctive cohesive abstract symbol, not a generic social media network diagram; no thin lines or excessive nodes. Flat vector-like design, simple intentional geometry, harmonious optical balance, excellent small-size legibility. Deep navy #102F4B, teal #18A9A1, tiny coral #EF555A center. Center the large symbol above the exact wordmark 'SafeAlert' in a sophisticated friendly rounded sans-serif in navy, carefully spaced. No other writing, no tagline, no shields or pins for this proposal, no background patterns, no mockups, no gradients, no shadows, no 3D, no watermark. Output one logo only, not a grid."
+    }
+  ]
+}

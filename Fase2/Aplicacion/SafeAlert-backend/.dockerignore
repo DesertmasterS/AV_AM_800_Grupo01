@@ -6,3 +6,6 @@ npm-debug.log
 # Herramientas y evidencias locales de las pruebas de seguridad
 /src/security/zap
 /.tmp
+
+/src/security/jmeter
+/src/security/postman
