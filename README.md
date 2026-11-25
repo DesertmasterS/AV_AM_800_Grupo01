@@ -10,4 +10,4 @@ Ronald Bruno (Scrum Master - Desarrollador Frontend) - Tomás Pérez (Scrum Deve
 ## Metodología de trabajo
 El desarrollo de este proyecto es realizado mediante el uso de la metodología Scrum, la información de cada sprint será almacenado en Google Drive y las actividades para realizar se mantendrá un registro con el uso de Trello. Se realizan historias de usuario junto a un Backlog Priorizado para identificar las historias de usuarios clave para la realización del proyecto, se analiza junto al Product Owner y Scrum Master el avance semanal del proyecto, identificando el progreso realizado y las tareas por realizar.
 ## Arquitectura de la Solución
-<img width="3278" height="1922" alt="Arquitectura-lucid" src="https://github.com/user-attachments/assets/c8c29e43-b3ab-4e8e-9c05-8b3dc9a75363" />
+![Arquitectura de SafeAlert](docs/arquitectura.png)
